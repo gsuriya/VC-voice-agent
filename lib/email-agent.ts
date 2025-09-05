@@ -1,17 +1,18 @@
 import OpenAI from 'openai';
-import { GoogleAPIService } from './google-apis';
+import { RealGmailAPIService } from './real-gmail-api';
+import { emailStorage } from './shared-email-storage';
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
 export class EmailAgent {
-  private googleAPI: GoogleAPIService;
+  private googleAPI: RealGmailAPIService;
   private processedEmails: Set<string> = new Set();
   private startTime: Date;
 
   constructor() {
-    this.googleAPI = new GoogleAPIService();
+    this.googleAPI = new RealGmailAPIService();
     this.startTime = new Date();
   }
 
@@ -30,9 +31,22 @@ export class EmailAgent {
     try {
       console.log('🔍 Checking for new emails...');
       
-      // Get recent emails (last 10 to reduce API calls)
-      const emails = await this.googleAPI.getRecentEmails(10);
+      // Get recent emails (last 50 to get more data for JARVIS)
+      const emails = await this.googleAPI.getRecentEmails(50);
       console.log(`📧 Found ${emails.length} recent emails`);
+      
+      // ALWAYS store emails in Supabase for JARVIS queries (regardless of response logic)
+      if (emails.length > 0) {
+        try {
+          console.log(`📧 Storing ${emails.length} emails in database for JARVIS...`);
+          await emailStorage.storeEmails(emails);
+          console.log(`✅ Successfully stored ${emails.length} emails in database`);
+        } catch (error) {
+          console.error('❌ Error storing emails:', error);
+        }
+      } else {
+        console.log('📧 No emails to store');
+      }
       
       let processed = 0;
       let responsesSent = 0;

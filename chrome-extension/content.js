@@ -413,32 +413,12 @@
             // Check if we have tokens stored
             let tokens = localStorage.getItem('gmail_tokens');
             if (!tokens) {
-                console.log('🔐 JARVIS: No tokens found, starting OAuth flow...');
-                
-                // Get auth URL
-                const authResponse = await fetch('http://localhost:3000/api/gmail-auth');
-                const authData = await authResponse.json();
-                
-                if (authData.authUrl) {
-                    // Open auth window
-                    const authWindow = window.open(authData.authUrl, 'gmail-auth', 'width=500,height=600');
-                    
-                    // Listen for auth completion
-                    const checkAuth = setInterval(() => {
-                        if (authWindow.closed) {
-                            clearInterval(checkAuth);
-                            // Check if tokens were stored
-                            tokens = localStorage.getItem('gmail_tokens');
-                            if (tokens) {
-                                console.log('✅ JARVIS: Auth completed, starting sync...');
-                                performEmailSync(JSON.parse(tokens));
-                            }
-                        }
-                    }, 1000);
-                }
+                console.log('🔐 JARVIS: No tokens found, please authenticate first.');
+                addMessage('JARVIS:', 'Please click "Connect Gmail" to authenticate first.');
+                return;
             } else {
                 console.log('✅ JARVIS: Tokens found, starting sync...');
-                performEmailSync(JSON.parse(tokens));
+                await performEmailSync(JSON.parse(tokens));
             }
         } catch (error) {
             console.error('❌ JARVIS: Auto-sync failed:', error);
@@ -535,9 +515,28 @@
     waitForGmail();
     
     // Auto-sync when Gmail loads
+setTimeout(() => {
+    autoSyncEmails();
+    startStatusUpdates();
+}, 3000);
+
+// Check for OAuth completion when returning to Gmail
+const urlParams = new URLSearchParams(window.location.search);
+if (urlParams.get('error')) {
+    addMessage('JARVIS:', `Authentication error: ${urlParams.get('error')}`);
+} else if (urlParams.get('success')) {
+    addMessage('JARVIS:', 'Authentication successful! Syncing emails...');
     setTimeout(() => {
         autoSyncEmails();
-        startStatusUpdates();
-    }, 3000);
+    }, 1000);
+}
+
+// Check if we have valid tokens and sync immediately
+if (localStorage.getItem('gmail_tokens')) {
+    addMessage('JARVIS:', 'Found existing tokens, syncing emails...');
+    setTimeout(() => {
+        autoSyncEmails();
+    }, 2000);
+}
 
 })();

@@ -46,9 +46,9 @@ export async function POST(request) {
         console.log(`📧 Retrieved ${emails.length} emails from Gmail`);
         
         // Store emails
-        emailStorage.storeEmails(emails);
+        await emailStorage.storeEmails(emails);
         
-        const stats = emailStorage.getStats();
+        const stats = await emailStorage.getStats();
         
         return Response.json({
             success: true,
@@ -84,7 +84,7 @@ export async function POST(request) {
 
 export async function GET(request) {
     try {
-        const stats = emailStorage.getStats();
+        const stats = await emailStorage.getStats();
         return Response.json({
             success: true,
             stats: stats

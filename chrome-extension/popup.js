@@ -53,7 +53,7 @@ function setupEventListeners() {
 
 async function updateStatus() {
     try {
-        const response = await fetch('http://localhost:3001/api/email-agent');
+        const response = await fetch('http://localhost:3000/api/email-agent');
         const data = await response.json();
         
         document.getElementById('emailsProcessed').textContent = data.processed || 0;
