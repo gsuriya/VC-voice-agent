@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jarvis AI Assistant</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: transparent;
+            overflow: hidden;
+        }
+
+        .jarvis-overlay {
+            position: fixed;
+            top: 0;
+            right: 0;
+            width: 400px;
+            height: 100vh;
+            background: linear-gradient(135deg, rgba(0, 20, 40, 0.95), rgba(0, 40, 80, 0.95));
+            backdrop-filter: blur(10px);
+            border-left: 2px solid #00ffff;
+            box-shadow: -5px 0 20px rgba(0, 255, 255, 0.3);
+            z-index: 999999;
+            display: flex;
+            flex-direction: column;
+            color: #ffffff;
+            font-family: 'Courier New', monospace;
+        }
+
+        .jarvis-header {
+            background: linear-gradient(90deg, #001122, #003366);
+            padding: 20px;
+            border-bottom: 1px solid #00ffff;
+            text-align: center;
+        }
+
+        .jarvis-title {
+            font-size: 24px;
+            font-weight: bold;
+            color: #00ffff;
+            text-shadow: 0 0 10px #00ffff;
+            margin-bottom: 10px;
+        }
+
+        .jarvis-subtitle {
+            font-size: 12px;
+            color: #88ccff;
+            opacity: 0.8;
+        }
+
+        .jarvis-status {
+            padding: 15px 20px;
+            background: rgba(0, 255, 255, 0.1);
+            border-bottom: 1px solid rgba(0, 255, 255, 0.3);
+        }
+
+        .status-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        .status-label {
+            color: #88ccff;
+        }
+
+        .status-value {
+            color: #00ffff;
+            font-weight: bold;
+        }
+
+        .status-active {
+            color: #00ff00;
+            text-shadow: 0 0 5px #00ff00;
+        }
+
+        .status-inactive {
+            color: #ff4444;
+        }
+
+        .jarvis-chat {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            background: rgba(0, 0, 0, 0.3);
+        }
+
+        .chat-message {
+            margin-bottom: 15px;
+            padding: 10px;
+            border-radius: 8px;
+            border-left: 3px solid #00ffff;
+            background: rgba(0, 255, 255, 0.05);
+        }
+
+        .chat-user {
+            color: #00ffff;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .chat-assistant {
+            color: #88ccff;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .chat-content {
+            color: #ffffff;
+            line-height: 1.4;
+        }
+
+        .jarvis-input {
+            padding: 20px;
+            background: rgba(0, 0, 0, 0.5);
+            border-top: 1px solid #00ffff;
+        }
+
+        .input-container {
+            display: flex;
+            gap: 10px;
+        }
+
+        .jarvis-input-field {
+            flex: 1;
+            padding: 12px;
+            background: rgba(0, 0, 0, 0.7);
+            border: 1px solid #00ffff;
+            border-radius: 6px;
+            color: #ffffff;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+        }
+
+        .jarvis-input-field:focus {
+            outline: none;
+            border-color: #00ff00;
+            box-shadow: 0 0 10px rgba(0, 255, 0, 0.3);
+        }
+
+        .jarvis-send-btn {
+            padding: 12px 20px;
+            background: linear-gradient(45deg, #00ffff, #0088ff);
+            border: none;
+            border-radius: 6px;
+            color: #000000;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .jarvis-send-btn:hover {
+            background: linear-gradient(45deg, #00ff00, #00ffff);
+            box-shadow: 0 0 15px rgba(0, 255, 255, 0.5);
+        }
+
+        .quick-actions {
+            padding: 15px 20px;
+            background: rgba(0, 0, 0, 0.3);
+            border-top: 1px solid rgba(0, 255, 255, 0.3);
+        }
+
+        .quick-actions h4 {
+            color: #00ffff;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+
+        .action-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .action-btn {
+            padding: 6px 12px;
+            background: rgba(0, 255, 255, 0.1);
+            border: 1px solid #00ffff;
+            border-radius: 4px;
+            color: #00ffff;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .action-btn:hover {
+            background: rgba(0, 255, 255, 0.2);
+            box-shadow: 0 0 8px rgba(0, 255, 255, 0.3);
+        }
+
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        .typing-indicator {
+            color: #00ffff;
+            font-style: italic;
+        }
+
+        .typing-indicator::after {
+            content: '...';
+            animation: dots 1.5s infinite;
+        }
+
+        @keyframes dots {
+            0%, 20% { content: ''; }
+            40% { content: '.'; }
+            60% { content: '..'; }
+            80%, 100% { content: '...'; }
+        }
+
+        .email-item {
+            background: rgba(0, 255, 255, 0.05);
+            border: 1px solid rgba(0, 255, 255, 0.2);
+            border-radius: 6px;
+            padding: 10px;
+            margin-bottom: 10px;
+        }
+
+        .email-from {
+            color: #00ffff;
+            font-weight: bold;
+            font-size: 12px;
+        }
+
+        .email-subject {
+            color: #ffffff;
+            font-size: 11px;
+            margin: 5px 0;
+        }
+
+        .email-preview {
+            color: #88ccff;
+            font-size: 10px;
+            opacity: 0.8;
+        }
+    </style>
+</head>
+<body>
+    <div class="jarvis-overlay">
+        <div class="jarvis-header">
+            <div class="jarvis-title">J.A.R.V.I.S</div>
+            <div class="jarvis-subtitle">Just A Rather Very Intelligent System</div>
+        </div>
+
+        <div class="jarvis-status">
+            <div class="status-item">
+                <span class="status-label">System Status:</span>
+                <span class="status-value status-active" id="systemStatus">ONLINE</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">Email Agent:</span>
+                <span class="status-value status-active" id="emailStatus">ACTIVE</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">Emails Processed:</span>
+                <span class="status-value" id="emailsProcessed">0</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">Responses Sent:</span>
+                <span class="status-value" id="responsesSent">0</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">Last Check:</span>
+                <span class="status-value" id="lastCheck">Just now</span>
+            </div>
+        </div>
+
+        <div class="jarvis-chat" id="chatContainer">
+            <div class="chat-message">
+                <div class="chat-assistant">JARVIS:</div>
+                <div class="chat-content">Good day, sir. I'm online and ready to assist with your email management. How may I be of service?</div>
+            </div>
+        </div>
+
+        <div class="quick-actions">
+            <h4>Quick Actions</h4>
+            <div class="action-buttons">
+                <button class="action-btn" onclick="sendQuickCommand('summarize latest emails')">Summarize Latest</button>
+                <button class="action-btn" onclick="sendQuickCommand('check calendar availability')">Check Calendar</button>
+                <button class="action-btn" onclick="sendQuickCommand('draft follow-up to latest email')">Draft Follow-up</button>
+                <button class="action-btn" onclick="sendQuickCommand('show recent .edu emails')">Show .edu Emails</button>
+            </div>
+        </div>
+
+        <div class="jarvis-input">
+            <div class="input-container">
+                <input type="text" class="jarvis-input-field" id="userInput" placeholder="Ask me anything about your emails..." onkeypress="handleKeyPress(event)">
+                <button class="jarvis-send-btn" onclick="sendMessage()">SEND</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Configuration
+        const API_BASE = 'http://localhost:3000/api';
+        let isProcessing = false;
+
+        // Initialize Jarvis
+        function initializeJarvis() {
+            updateStatus();
+            setInterval(updateStatus, 2000); // Update every 2 seconds
+            addChatMessage('assistant', 'System initialized. Monitoring your email activity...');
+        }
+
+        // Update status display
+        async function updateStatus() {
+            try {
+                const response = await fetch(`${API_BASE}/email-agent`);
+                const data = await response.json();
+                
+                document.getElementById('emailsProcessed').textContent = data.processed || 0;
+                document.getElementById('responsesSent').textContent = data.responsesSent || 0;
+                document.getElementById('lastCheck').textContent = 'Just now';
+                
+                if (data.schedulerRunning) {
+                    document.getElementById('emailStatus').textContent = 'ACTIVE';
+                    document.getElementById('emailStatus').className = 'status-value status-active';
+                } else {
+                    document.getElementById('emailStatus').textContent = 'INACTIVE';
+                    document.getElementById('emailStatus').className = 'status-value status-inactive';
+                }
+            } catch (error) {
+                console.error('Status update failed:', error);
+            }
+        }
+
+        // Add message to chat
+        function addChatMessage(sender, content, isTyping = false) {
+            const chatContainer = document.getElementById('chatContainer');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'chat-message';
+            
+            const senderDiv = document.createElement('div');
+            senderDiv.className = sender === 'user' ? 'chat-user' : 'chat-assistant';
+            senderDiv.textContent = sender === 'user' ? 'YOU:' : 'JARVIS:';
+            
+            const contentDiv = document.createElement('div');
+            contentDiv.className = 'chat-content';
+            if (isTyping) {
+                contentDiv.className += ' typing-indicator';
+                contentDiv.textContent = content;
+            } else {
+                contentDiv.textContent = content;
+            }
+            
+            messageDiv.appendChild(senderDiv);
+            messageDiv.appendChild(contentDiv);
+            chatContainer.appendChild(messageDiv);
+            
+            // Auto-scroll to bottom
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        // Send message
+        async function sendMessage() {
+            const input = document.getElementById('userInput');
+            const message = input.value.trim();
+            
+            if (!message || isProcessing) return;
+            
+            isProcessing = true;
+            input.value = '';
+            
+            // Add user message
+            addChatMessage('user', message);
+            
+            // Show typing indicator
+            addChatMessage('assistant', 'Processing your request', true);
+            
+            try {
+                const response = await processCommand(message);
+                addChatMessage('assistant', response);
+            } catch (error) {
+                addChatMessage('assistant', `I apologize, sir. I encountered an error: ${error.message}`);
+            } finally {
+                isProcessing = false;
+            }
+        }
+
+        // Process semantic commands
+        async function processCommand(command) {
+            const lowerCommand = command.toLowerCase();
+            
+            if (lowerCommand.includes('summarize') && lowerCommand.includes('email')) {
+                return await summarizeEmails(command);
+            } else if (lowerCommand.includes('calendar') || lowerCommand.includes('availability')) {
+                return await checkCalendar(command);
+            } else if (lowerCommand.includes('draft') || lowerCommand.includes('follow-up')) {
+                return await draftEmail(command);
+            } else if (lowerCommand.includes('show') && lowerCommand.includes('edu')) {
+                return await showEduEmails();
+            } else if (lowerCommand.includes('status') || lowerCommand.includes('how are you')) {
+                return await getSystemStatus();
+            } else {
+                return await handleGeneralQuery(command);
+            }
+        }
+
+        // Summarize emails
+        async function summarizeEmails(command) {
+            try {
+                const response = await fetch(`${API_BASE}/email-agent/summarize`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ command })
+                });
+                const data = await response.json();
+                return data.summary || 'No recent emails to summarize.';
+            } catch (error) {
+                return 'Unable to summarize emails at this time.';
+            }
+        }
+
+        // Check calendar availability
+        async function checkCalendar(command) {
+            try {
+                const response = await fetch(`${API_BASE}/email-agent/calendar`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ command })
+                });
+                const data = await response.json();
+                return data.availability || 'Calendar data unavailable.';
+            } catch (error) {
+                return 'Unable to access calendar at this time.';
+            }
+        }
+
+        // Draft email
+        async function draftEmail(command) {
+            try {
+                const response = await fetch(`${API_BASE}/email-agent/draft`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ command })
+                });
+                const data = await response.json();
+                return data.draft || 'Unable to draft email at this time.';
+            } catch (error) {
+                return 'Unable to draft email at this time.';
+            }
+        }
+
+        // Show .edu emails
+        async function showEduEmails() {
+            try {
+                const response = await fetch(`${API_BASE}/email-agent/edu-emails`);
+                const data = await response.json();
+                
+                if (data.emails && data.emails.length > 0) {
+                    let result = 'Recent .edu emails:\n\n';
+                    data.emails.forEach(email => {
+                        result += `From: ${email.from}\n`;
+                        result += `Subject: ${email.subject}\n`;
+                        result += `Preview: ${email.snippet}\n\n`;
+                    });
+                    return result;
+                } else {
+                    return 'No recent .edu emails found.';
+                }
+            } catch (error) {
+                return 'Unable to retrieve .edu emails at this time.';
+            }
+        }
+
+        // Get system status
+        async function getSystemStatus() {
+            try {
+                const response = await fetch(`${API_BASE}/email-agent`);
+                const data = await response.json();
+                
+                return `System Status Report:\n\n` +
+                       `Email Agent: ${data.schedulerRunning ? 'ACTIVE' : 'INACTIVE'}\n` +
+                       `Emails Processed: ${data.processed || 0}\n` +
+                       `Responses Sent: ${data.responsesSent || 0}\n` +
+                       `Next Check: ${data.nextCheck || 'Unknown'}\n\n` +
+                       `All systems operational, sir.`;
+            } catch (error) {
+                return 'Unable to retrieve system status.';
+            }
+        }
+
+        // Handle general queries
+        async function handleGeneralQuery(query) {
+            // For now, return a helpful response
+            return `I understand you're asking about "${query}". I can help you with:\n\n` +
+                   `• Summarizing recent emails\n` +
+                   `• Checking calendar availability\n` +
+                   `• Drafting follow-up emails\n` +
+                   `• Showing .edu emails\n` +
+                   `• System status updates\n\n` +
+                   `Please be more specific about what you'd like me to do.`;
+        }
+
+        // Quick command handler
+        function sendQuickCommand(command) {
+            document.getElementById('userInput').value = command;
+            sendMessage();
+        }
+
+        // Handle Enter key
+        function handleKeyPress(event) {
+            if (event.key === 'Enter') {
+                sendMessage();
+            }
+        }
+
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', initializeJarvis);
+    </script>
+</body>
+</html>

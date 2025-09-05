@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Email AI Assistant</title>
+  <style>
+    body {
+      width: 350px;
+      min-height: 400px;
+      margin: 0;
+      padding: 0;
+      font-family: 'Google Sans', Roboto, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+    }
+
+    .header {
+      padding: 20px;
+      text-align: center;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .header h1 {
+      margin: 0;
+      font-size: 20px;
+      font-weight: 600;
+    }
+
+    .header p {
+      margin: 8px 0 0 0;
+      font-size: 14px;
+      opacity: 0.8;
+    }
+
+    .content {
+      padding: 20px;
+    }
+
+    .section {
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+
+    .section h3 {
+      margin: 0 0 12px 0;
+      font-size: 16px;
+      font-weight: 600;
+    }
+
+    .form-group {
+      margin-bottom: 16px;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    .form-group input {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.1);
+      color: white;
+      font-size: 14px;
+      box-sizing: border-box;
+    }
+
+    .form-group input::placeholder {
+      color: rgba(255, 255, 255, 0.6);
+    }
+
+    .form-group input:focus {
+      outline: none;
+      border-color: rgba(255, 255, 255, 0.6);
+    }
+
+    .btn {
+      width: 100%;
+      padding: 12px;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      margin-bottom: 8px;
+    }
+
+    .btn-primary {
+      background: rgba(255, 255, 255, 0.2);
+      color: white;
+      border: 1px solid rgba(255, 255, 255, 0.3);
+    }
+
+    .btn-primary:hover {
+      background: rgba(255, 255, 255, 0.3);
+    }
+
+    .btn-success {
+      background: #4caf50;
+      color: white;
+    }
+
+    .btn-success:hover {
+      background: #45a049;
+    }
+
+    .status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 12px;
+      font-size: 14px;
+    }
+
+    .status-indicator {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+
+    .status-indicator.connected {
+      background: #4caf50;
+    }
+
+    .status-indicator.disconnected {
+      background: #f44336;
+    }
+
+    .help-text {
+      font-size: 12px;
+      opacity: 0.8;
+      margin-top: 8px;
+      line-height: 1.4;
+    }
+
+    .footer {
+      padding: 16px 20px;
+      text-align: center;
+      border-top: 1px solid rgba(255, 255, 255, 0.2);
+      font-size: 12px;
+      opacity: 0.8;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>🤖 Email AI Assistant</h1>
+    <p>Your personal Gmail assistant</p>
+  </div>
+
+  <div class="content">
+    <div class="section">
+      <h3>🔑 API Configuration</h3>
+      
+      <div class="form-group">
+        <label for="openai-key">OpenAI API Key</label>
+        <input type="password" id="openai-key" placeholder="sk-..." />
+        <div class="help-text">
+          Get your API key from <a href="https://platform.openai.com/api-keys" target="_blank" style="color: white;">OpenAI Platform</a>
+        </div>
+      </div>
+
+      <button class="btn btn-primary" id="save-api-key">Save API Key</button>
+    </div>
+
+    <div class="section">
+      <h3>🔗 Google Authentication</h3>
+      
+      <div class="status">
+        <div class="status-indicator" id="google-status"></div>
+        <span id="google-status-text">Not connected</span>
+      </div>
+
+      <button class="btn btn-primary" id="connect-google">Connect Google Account</button>
+      <div class="help-text">
+        Connect to access Gmail and Google Calendar
+      </div>
+    </div>
+
+    <div class="section">
+      <h3>⚙️ Settings</h3>
+      
+      <div class="form-group">
+        <label>
+          <input type="checkbox" id="auto-respond" checked />
+          Auto-respond to .edu emails
+        </label>
+        <div class="help-text">
+          Automatically respond to emails from .edu addresses
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <h3>📊 Status</h3>
+      
+      <div class="status">
+        <div class="status-indicator" id="ai-status"></div>
+        <span id="ai-status-text">Checking...</span>
+      </div>
+
+      <button class="btn btn-success" id="test-ai">Test AI Connection</button>
+    </div>
+  </div>
+
+  <div class="footer">
+    <p>Made with ❤️ for Pranav</p>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
+

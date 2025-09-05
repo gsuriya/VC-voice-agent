@@ -29,42 +29,40 @@ export default function EmailAgentDashboard() {
 
   const [isConnecting, setIsConnecting] = useState(false);
 
-  // Check if we have tokens in localStorage
+  // Check for OAuth callback and auto-start
   useEffect(() => {
-    const checkAuthStatus = () => {
-      const tokens = localStorage.getItem('google_tokens');
-      if (tokens) {
-        setStatus(prev => ({ ...prev, isConnected: true }));
-        // Auto-start the scheduler
-        autoStartScheduler(JSON.parse(tokens));
-      }
-    };
+    const urlParams = new URLSearchParams(window.location.search);
+    const success = urlParams.get('success');
+    const tokens = urlParams.get('tokens');
 
-    checkAuthStatus();
-    
-    // Check scheduler status every 5 seconds
-    const statusInterval = setInterval(checkSchedulerStatus, 5000);
-    
-    return () => clearInterval(statusInterval);
+    if (success === 'true' && tokens) {
+      try {
+        const tokenData = JSON.parse(decodeURIComponent(tokens));
+        localStorage.setItem('googleTokens', JSON.stringify(tokenData));
+        setStatus(prev => ({ ...prev, isConnected: true }));
+        autoStartScheduler(tokenData);
+        
+        // Clean up URL
+        window.history.replaceState({}, document.title, window.location.pathname);
+      } catch (error) {
+        console.error('Error parsing tokens:', error);
+      }
+    } else {
+      // Check if we have stored tokens
+      const storedTokens = localStorage.getItem('googleTokens');
+      if (storedTokens) {
+        try {
+          const tokenData = JSON.parse(storedTokens);
+          setStatus(prev => ({ ...prev, isConnected: true }));
+          autoStartScheduler(tokenData);
+        } catch (error) {
+          console.error('Error loading stored tokens:', error);
+        }
+      }
+    }
   }, []);
 
-  const checkSchedulerStatus = async () => {
-    try {
-      const response = await fetch('/api/email-agent/scheduler');
-      if (response.ok) {
-        const data = await response.json();
-        setStatus(prev => ({
-          ...prev,
-          schedulerRunning: data.isRunning,
-          nextCheck: data.nextCheck,
-          checkInterval: data.checkInterval
-        }));
-      }
-    } catch (error) {
-      console.error('Error checking scheduler status:', error);
-    }
-  };
-
+  // Auto-start scheduler
   const autoStartScheduler = async (tokenData: any) => {
     try {
       console.log('Auto-starting email scheduler...');
@@ -74,25 +72,26 @@ export default function EmailAgentDashboard() {
         body: JSON.stringify({ 
           action: 'start',
           tokens: tokenData,
-          interval: 1000 // 1 second
+          interval: 2000 // 2 seconds
         })
       });
 
       if (response.ok) {
-        console.log('Email scheduler started successfully');
         setStatus(prev => ({ ...prev, schedulerRunning: true }));
+        console.log('Email scheduler started successfully');
       }
     } catch (error) {
       console.error('Error auto-starting scheduler:', error);
     }
   };
 
+  // Connect to Google
   const connectGoogle = async () => {
     setIsConnecting(true);
     try {
       const response = await fetch('/api/auth/google');
-      if (response.ok) {
-        const data = await response.json();
+      const data = await response.json();
+      if (data.authUrl) {
         window.location.href = data.authUrl;
       }
     } catch (error) {
@@ -102,36 +101,39 @@ export default function EmailAgentDashboard() {
     }
   };
 
-  const resetEmailTracker = async () => {
-    try {
-      const response = await fetch('/api/email-agent/reset', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
-      });
-
-      if (response.ok) {
-        alert('Email tracker reset! All emails can now be processed again.');
-        console.log('Email tracker reset successfully');
+  // Check scheduler status periodically
+  useEffect(() => {
+    const checkStatus = async () => {
+      try {
+        const response = await fetch('/api/email-agent/scheduler');
+        if (response.ok) {
+          const data = await response.json();
+          setStatus(prev => ({
+            ...prev,
+            schedulerRunning: data.isRunning,
+            nextCheck: data.nextCheck,
+            checkInterval: data.checkInterval
+          }));
+        }
+      } catch (error) {
+        console.error('Error checking scheduler status:', error);
       }
-    } catch (error) {
-      console.error('Error resetting tracker:', error);
-      alert('Error resetting tracker');
-    }
-  };
+    };
+
+    checkStatus();
+    const interval = setInterval(checkStatus, 5000); // Check every 5 seconds
+    return () => clearInterval(interval);
+  }, []);
 
   if (!status.isConnected) {
     return (
-      <div className="container mx-auto p-6">
-        <Card className="max-w-2xl mx-auto">
-          <CardHeader>
-            <CardTitle className="text-2xl font-bold text-center">
-              🤖 Email Agent Dashboard
-            </CardTitle>
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <Card className="w-full max-w-md">
+          <CardHeader className="text-center">
+            <CardTitle className="text-2xl font-bold">Email Agent</CardTitle>
+            <p className="text-gray-600">Connect your Google account to start</p>
           </CardHeader>
-          <CardContent className="text-center space-y-4">
-            <p className="text-gray-600">
-              Connect your Google account to start the email agent
-            </p>
+          <CardContent className="space-y-4">
             <Button 
               onClick={connectGoogle} 
               disabled={isConnecting}
@@ -153,110 +155,95 @@ export default function EmailAgentDashboard() {
   }
 
   return (
-    <div className="container mx-auto p-6">
-      <Card className="max-w-4xl mx-auto">
-        <CardHeader>
-          <CardTitle className="text-2xl font-bold text-center">
-            🤖 Email Agent Dashboard
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          {/* Status Overview */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Card className="bg-green-50 border-green-200">
-              <CardContent className="p-4 text-center">
-                <div className="flex items-center justify-center mb-2">
-                  {status.schedulerRunning ? (
-                    <CheckCircle className="w-6 h-6 text-green-600" />
-                  ) : (
-                    <XCircle className="w-6 h-6 text-red-600" />
-                  )}
-                </div>
-                <h3 className="font-semibold text-green-800">Agent Status</h3>
-                <p className="text-sm text-green-600">
-                  {status.schedulerRunning ? 'ACTIVE' : 'INACTIVE'}
-                </p>
-              </CardContent>
-            </Card>
+    <div className="min-h-screen bg-gray-50 p-4">
+      <div className="max-w-4xl mx-auto space-y-6">
+        <div className="text-center">
+          <h1 className="text-3xl font-bold text-gray-900">Email Agent Dashboard</h1>
+          <p className="text-gray-600 mt-2">Automatically monitoring and responding to .edu emails</p>
+        </div>
 
-            <Card className="bg-blue-50 border-blue-200">
-              <CardContent className="p-4 text-center">
-                <Mail className="w-6 h-6 text-blue-600 mx-auto mb-2" />
-                <h3 className="font-semibold text-blue-800">Emails Received</h3>
-                <p className="text-2xl font-bold text-blue-600">{status.emailsReceived}</p>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-purple-50 border-purple-200">
-              <CardContent className="p-4 text-center">
-                <Send className="w-6 h-6 text-purple-600 mx-auto mb-2" />
-                <h3 className="font-semibold text-purple-800">Responses Sent</h3>
-                <p className="text-2xl font-bold text-purple-600">{status.emailsSent}</p>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Active Status */}
-          <div className="text-center p-6 bg-green-50 border border-green-200 rounded-lg">
-            <h3 className="text-xl font-semibold text-green-800 mb-2">
-              🚀 Email Agent is ACTIVE
-            </h3>
-            <p className="text-green-700 mb-2">
-              Automatically processing new .edu emails every second
-            </p>
-            <p className="text-sm text-green-600">
-              Only responds to emails received after program started
-            </p>
-            <div className="mt-4 flex items-center justify-center space-x-4 text-sm text-green-600">
-              <div className="flex items-center">
-                <Clock className="w-4 h-4 mr-1" />
-                Next check: {status.nextCheck === 'N/A' ? 'N/A' : new Date(status.nextCheck).toLocaleTimeString()}
-              </div>
-              <div className="flex items-center">
-                <RefreshCw className="w-4 h-4 mr-1" />
-                Interval: {status.checkInterval}s
-              </div>
-            </div>
-          </div>
-
-          {/* Live Activity */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">📊 Live Activity</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                <div className="flex items-center justify-between p-3 bg-gray-50 rounded">
-                  <span className="text-sm text-gray-600">Last Activity:</span>
-                  <span className="text-sm font-medium">{status.lastActivity}</span>
-                </div>
-                <div className="flex items-center justify-between p-3 bg-gray-50 rounded">
-                  <span className="text-sm text-gray-600">Processing Status:</span>
-                  <Badge variant={status.schedulerRunning ? "default" : "secondary"}>
-                    {status.schedulerRunning ? "Running" : "Stopped"}
-                  </Badge>
-                </div>
-                <div className="flex items-center justify-between p-3 bg-gray-50 rounded">
-                  <span className="text-sm text-gray-600">Email Filter:</span>
-                  <Badge variant="outline">.edu emails only</Badge>
-                </div>
+            <CardContent className="p-4">
+              <div className="flex items-center space-x-2">
+                {status.schedulerRunning ? (
+                  <CheckCircle className="w-5 h-5 text-green-500" />
+                ) : (
+                  <XCircle className="w-5 h-5 text-red-500" />
+                )}
+                <span className="font-medium">Status</span>
               </div>
+              <p className="text-sm text-gray-600 mt-1">
+                {status.schedulerRunning ? 'Active' : 'Inactive'}
+              </p>
             </CardContent>
           </Card>
 
-          {/* Emergency Reset */}
-          <div className="text-center">
-            <Button 
-              onClick={resetEmailTracker} 
-              variant="destructive"
-              size="sm"
-            >
-              <RefreshCw className="w-4 h-4 mr-2" />
-              Reset Tracker (Emergency)
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center space-x-2">
+                <Clock className="w-5 h-5 text-blue-500" />
+                <span className="font-medium">Check Interval</span>
+              </div>
+              <p className="text-sm text-gray-600 mt-1">
+                {status.checkInterval} seconds
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center space-x-2">
+                <Mail className="w-5 h-5 text-green-500" />
+                <span className="font-medium">Emails Received</span>
+              </div>
+              <p className="text-sm text-gray-600 mt-1">
+                {status.emailsReceived}
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center space-x-2">
+                <Send className="w-5 h-5 text-blue-500" />
+                <span className="font-medium">Responses Sent</span>
+              </div>
+              <p className="text-sm text-gray-600 mt-1">
+                {status.emailsSent}
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Agent Status</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="text-center p-4 bg-green-50 border border-green-200 rounded-lg">
+              <h3 className="text-lg font-semibold text-green-800 mb-2">🤖 Email Agent is ACTIVE</h3>
+              <p className="text-green-700">
+                Automatically processing new .edu emails every 2 seconds
+              </p>
+              <p className="text-sm text-green-600 mt-1">
+                Only responds to emails received after program started
+              </p>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="p-3 bg-gray-50 rounded-lg">
+                <h4 className="font-medium text-gray-900">Next Check</h4>
+                <p className="text-sm text-gray-600">{status.nextCheck}</p>
+              </div>
+              <div className="p-3 bg-gray-50 rounded-lg">
+                <h4 className="font-medium text-gray-900">Last Activity</h4>
+                <p className="text-sm text-gray-600">{status.lastActivity}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }

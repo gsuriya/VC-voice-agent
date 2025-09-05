@@ -153,6 +153,60 @@ export class GoogleAPIService {
     }
   }
 
+  // Get calendar availability for the next 7 days
+  async getCalendarAvailability() {
+    try {
+      const now = new Date();
+      const nextWeek = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+      
+      const response = await this.calendar.freebusy.query({
+        requestBody: {
+          timeMin: now.toISOString(),
+          timeMax: nextWeek.toISOString(),
+          items: [{ id: 'primary' }]
+        }
+      });
+
+      const busy = response.data.calendars.primary.busy || [];
+      
+      // Generate free time slots (simplified)
+      const free = [];
+      let currentTime = new Date(now);
+      
+      for (let i = 0; i < 7; i++) {
+        const dayStart = new Date(currentTime);
+        dayStart.setHours(9, 0, 0, 0);
+        
+        const dayEnd = new Date(currentTime);
+        dayEnd.setHours(17, 0, 0, 0);
+        
+        // Check if this time slot conflicts with busy times
+        const hasConflict = busy.some((busySlot: any) => {
+          const busyStart = new Date(busySlot.start);
+          const busyEnd = new Date(busySlot.end);
+          return (dayStart < busyEnd && dayEnd > busyStart);
+        });
+        
+        if (!hasConflict) {
+          free.push({
+            start: dayStart.toISOString(),
+            end: dayEnd.toISOString()
+          });
+        }
+        
+        currentTime.setDate(currentTime.getDate() + 1);
+      }
+
+      return {
+        busy,
+        free
+      };
+    } catch (error) {
+      console.error('Error fetching calendar availability:', error);
+      return null;
+    }
+  }
+
   async createEvent(eventDetails: {
     summary: string;
     description?: string;

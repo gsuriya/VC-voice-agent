@@ -4,7 +4,7 @@ export class EmailScheduler {
   private emailAgent: EmailAgent;
   private intervalId: NodeJS.Timeout | null = null;
   private isRunning: boolean = false;
-  private checkInterval: number = 1000; // 1 second
+  private checkInterval: number = 2000; // 2 seconds
 
   constructor() {
     this.emailAgent = new EmailAgent();
@@ -20,7 +20,7 @@ export class EmailScheduler {
     this.emailAgent.resetStartTime(); // Reset tracker and start time when scheduler starts
 
     this.isRunning = true;
-    console.log('🚀 Email scheduler started - checking every 1 second for new .edu emails');
+    console.log('🚀 Email scheduler started - checking every 2 seconds for new .edu emails');
 
     // Immediately process emails once, then set interval
     this.processEmails();

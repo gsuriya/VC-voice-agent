@@ -30,8 +30,8 @@ export class EmailAgent {
     try {
       console.log('🔍 Checking for new emails...');
       
-      // Get recent emails (last 5 to reduce API calls)
-      const emails = await this.googleAPI.getRecentEmails(5);
+      // Get recent emails (last 10 to reduce API calls)
+      const emails = await this.googleAPI.getRecentEmails(10);
       console.log(`📧 Found ${emails.length} recent emails`);
       
       let processed = 0;
@@ -116,18 +116,20 @@ export class EmailAgent {
     const prompt = `
     You are an AI assistant helping Pranav, a student at NYU Stern, manage his emails.
 
-    Your job is to determine if this email needs a response. ONLY respond if:
+    Your job is to determine if this email needs a response. Respond with "YES" if:
     1. It's a direct question or request
     2. Someone is asking for a meeting/call
     3. It's a professional inquiry that requires a response
     4. It's from someone he should respond to
+    5. It's a casual greeting or conversation starter
+    6. It's any kind of message that would be rude to ignore
+    7. It's from a .edu email (which this is)
 
     DO NOT respond to:
     - Spam or promotional emails
     - Automated emails
-    - Emails that don't require a response
     - Newsletters or notifications
-    - Emails that are just informational
+    - Emails that are clearly just informational
 
     Email details:
     From: ${email.from}
@@ -135,7 +137,7 @@ export class EmailAgent {
     Body: ${email.body}
 
     Respond with ONLY "YES" if this email needs a response, or "NO" if it doesn't.
-    Be very conservative - only say YES if it clearly needs a response.
+    Be more liberal - if it's from a .edu email and seems like a real person, say YES.
     `;
 
     try {
@@ -153,7 +155,7 @@ export class EmailAgent {
     }
   }
 
-  // Generate appropriate response
+  // Generate appropriate response based on email content
   async generateResponse(email: any): Promise<string> {
     const prompt = `
     You are Pranav, a student at NYU Stern. Generate a professional response to this email:
@@ -184,6 +186,96 @@ export class EmailAgent {
     } catch (error) {
       console.error('Error generating response:', error);
       return 'Thank you for your email. I will get back to you soon.\n\nBest, Pranav';
+    }
+  }
+
+  // Get recent emails (for semantic commands)
+  async getRecentEmails(maxResults: number = 10): Promise<any[]> {
+    try {
+      return await this.googleAPI.getRecentEmails(maxResults);
+    } catch (error) {
+      console.error('Error getting recent emails:', error);
+      return [];
+    }
+  }
+
+  // Generate email summary for semantic commands
+  async generateEmailSummary(emails: any[], command: string): Promise<string> {
+    const prompt = `
+    You are JARVIS, an AI assistant helping Pranav manage his emails.
+    
+    Here are recent emails from .edu addresses:
+    ${emails.map(email => `
+    From: ${email.from}
+    Subject: ${email.subject}
+    Body: ${email.body?.substring(0, 200)}...
+    Date: ${email.date}
+    `).join('\n---\n')}
+
+    User request: ${command}
+    
+    Provide a concise summary of these emails, highlighting:
+    - Key topics and requests
+    - Urgent items that need attention
+    - Any meeting requests or scheduling needs
+    - Overall email activity patterns
+    
+    Keep it professional and actionable.
+    `;
+
+    try {
+      const response = await openai.chat.completions.create({
+        model: 'gpt-4',
+        messages: [{ role: 'user', content: prompt }],
+        temperature: 0.3,
+      });
+
+      return response.choices[0].message.content || 'Unable to generate summary.';
+    } catch (error) {
+      console.error('Error generating email summary:', error);
+      return 'Unable to generate summary at this time.';
+    }
+  }
+
+  // Generate draft response for semantic commands
+  async generateDraftResponse(email: any, command: string): Promise<string> {
+    const prompt = `
+    You are JARVIS, drafting a follow-up email for Pranav, a student at NYU Stern.
+    
+    Original email:
+    From: ${email.from}
+    Subject: ${email.subject}
+    Body: ${email.body}
+    
+    User request: ${command}
+    
+    Draft an appropriate follow-up email that:
+    - Is professional but casual (college student tone)
+    - Addresses the original email appropriately
+    - Includes relevant information or next steps
+    - Always ends with "Best, Pranav"
+    
+    Make it sound natural and helpful.
+    `;
+
+    try {
+      const response = await openai.chat.completions.create({
+        model: 'gpt-4',
+        messages: [{ role: 'user', content: prompt }],
+        temperature: 0.7,
+      });
+
+      let draft = response.choices[0].message.content || 'Unable to generate draft.';
+      
+      // Ensure it ends with "Best, Pranav"
+      if (!draft.includes('Best, Pranav')) {
+        draft += '\n\nBest, Pranav';
+      }
+      
+      return draft;
+    } catch (error) {
+      console.error('Error generating draft response:', error);
+      return 'Unable to generate draft at this time.';
     }
   }
 }
