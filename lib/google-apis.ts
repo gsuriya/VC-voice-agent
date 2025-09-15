@@ -223,4 +223,55 @@ export class GoogleAPIService {
       throw error;
     }
   }
+
+  // Gmail Push Notifications
+  async setupGmailWatch(topicName: string) {
+    try {
+      console.log('🔔 Setting up Gmail push notifications...');
+      
+      const response = await this.gmail.users.watch({
+        userId: 'me',
+        requestBody: {
+          topicName: topicName,
+          labelIds: ['INBOX'], // Watch for inbox changes
+          labelFilterAction: 'include'
+        }
+      });
+
+      console.log('✅ Gmail watch setup successful:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('❌ Error setting up Gmail watch:', error);
+      throw error;
+    }
+  }
+
+  async stopGmailWatch() {
+    try {
+      const response = await this.gmail.users.stop({
+        userId: 'me'
+      });
+      
+      console.log('🛑 Gmail watch stopped');
+      return response.data;
+    } catch (error) {
+      console.error('❌ Error stopping Gmail watch:', error);
+      throw error;
+    }
+  }
+
+  async getGmailHistory(startHistoryId: string) {
+    try {
+      const response = await this.gmail.users.history.list({
+        userId: 'me',
+        startHistoryId: startHistoryId,
+        labelId: 'INBOX'
+      });
+
+      return response.data;
+    } catch (error) {
+      console.error('❌ Error getting Gmail history:', error);
+      throw error;
+    }
+  }
 }
