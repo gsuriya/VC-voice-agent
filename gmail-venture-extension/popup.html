@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    body {
+      width: 300px;
+      padding: 20px;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      margin: 0;
+      background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+      color: white;
+    }
+    
+    .header {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    
+    .header h2 {
+      margin: 0 0 10px 0;
+      font-size: 18px;
+      font-weight: 600;
+    }
+    
+    .header p {
+      margin: 0;
+      font-size: 14px;
+      opacity: 0.9;
+    }
+    
+    .status {
+      background: rgba(255, 255, 255, 0.1);
+      padding: 15px;
+      border-radius: 8px;
+      margin-bottom: 15px;
+      backdrop-filter: blur(10px);
+    }
+    
+    .status-item {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 8px;
+      font-size: 14px;
+    }
+    
+    .status-item:last-child {
+      margin-bottom: 0;
+    }
+    
+    .status-value {
+      font-weight: 600;
+    }
+    
+    .instructions {
+      font-size: 12px;
+      opacity: 0.8;
+      line-height: 1.4;
+      text-align: center;
+    }
+    
+    .logo {
+      width: 40px;
+      height: 40px;
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 15px auto;
+      font-size: 18px;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="logo">V</div>
+    <h2>Venture Email Tab</h2>
+    <p>Gmail Sidebar Extension</p>
+  </div>
+  
+  <div class="status">
+    <div class="status-item">
+      <span>Status:</span>
+      <span class="status-value" id="status">Active</span>
+    </div>
+    <div class="status-item">
+      <span>Version:</span>
+      <span class="status-value">1.0</span>
+    </div>
+  </div>
+  
+  <div class="instructions">
+    Navigate to Gmail to see the Venture Email Tab sidebar. Use the minimize button to toggle the sidebar size.
+  </div>
+  
+  <script src="popup.js"></script>
+</body>
+</html>

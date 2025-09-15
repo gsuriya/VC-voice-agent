@@ -5,7 +5,7 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
-import { BarChart3, Building2, Phone, PieChart, Settings, Moon, Sun, Menu, X, Mic } from "lucide-react"
+import { BarChart3, Building2, Phone, PieChart, Settings, Moon, Sun, Menu, X, Mic, Mail } from "lucide-react"
 import { useTheme } from "next-themes"
 
 const navigation = [
@@ -13,6 +13,7 @@ const navigation = [
   { name: "Companies", href: "/companies", icon: Building2 },
   { name: "Live Calls", href: "/calls", icon: Phone },
   { name: "Outbound Calls", href: "/voice", icon: Mic },
+  { name: "Email Agent", href: "/email-agent", icon: Mail },
   { name: "Analytics", href: "/analytics", icon: PieChart },
   { name: "Settings", href: "/settings", icon: Settings },
 ]

@@ -1,0 +1,26 @@
+{
+  "manifest_version": 3,
+  "name": "Venture Email Tab",
+  "version": "1.0",
+  "description": "Adds a venture email sidebar to Gmail",
+  "permissions": [
+    "activeTab"
+  ],
+  "content_scripts": [
+    {
+      "matches": ["https://mail.google.com/*"],
+      "js": ["content.js"],
+      "css": ["styles.css"],
+      "run_at": "document_end"
+    }
+  ],
+  "icons": {
+    "16": "icon16.png",
+    "48": "icon48.png",
+    "128": "icon128.png"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Venture Email Tab"
+  }
+}
