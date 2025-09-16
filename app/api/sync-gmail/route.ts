@@ -17,7 +17,7 @@ export async function OPTIONS(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { tokens, userEmail, maxResults = 500 } = body;
+    const { tokens, userEmail, maxResults = 500, namespace } = body;
     
     if (!tokens) {
       return NextResponse.json(
@@ -175,12 +175,12 @@ export async function POST(request: NextRequest) {
       };
     });
 
-    console.log('🔄 Storing vectors in Pinecone...');
+    console.log(`🔄 Storing vectors in Pinecone with namespace: ${namespace || userEmail}...`);
     
-    // Store in vector database with batching
-    const storedIds = await batchStoreVectors(vectorData);
+    // Store in vector database with batching and namespace for user isolation
+    const storedIds = await batchStoreVectors(vectorData, namespace || userEmail);
     
-    console.log(`✅ Successfully synced ${storedIds.length} emails to vector database`);
+    console.log(`✅ Successfully synced ${storedIds.length} emails to vector database for ${userEmail}`);
 
     return NextResponse.json({
       success: true,

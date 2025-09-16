@@ -73,7 +73,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { action, query, text, metadata } = body;
+    const { action, query, text, metadata, namespace, filter } = body;
     
     switch (action) {
       case 'store_test_email':
@@ -108,7 +108,7 @@ export async function POST(request: NextRequest) {
           return NextResponse.json({ error: 'Query is required' }, { status: 400 });
         }
         
-        const results = await searchVectors(query, 10);
+        const results = await searchVectors(query, 10, filter || {}, namespace);
         
         return NextResponse.json({
           success: true,

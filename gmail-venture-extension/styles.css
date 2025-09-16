@@ -1,99 +1,247 @@
-/* AI Email Agent - Clean Right Sidebar */
+/* AI Email Agent - Professional Black & White Theme */
 
-/* Ensure sidebar doesn't interfere with Gmail */
-#ai-email-sidebar {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
+/* Reset and base styles for sidebar */
+#ai-sidebar {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif !important;
   box-sizing: border-box !important;
-  z-index: 10000 !important;
+  color: #000000 !important;
+  line-height: 1.5 !important;
 }
 
-#ai-email-sidebar * {
+#ai-sidebar * {
   box-sizing: border-box !important;
 }
 
-/* Toggle button */
-#ai-toggle-btn {
-  position: fixed !important;
-  top: 20px !important;
-  right: 20px !important;
-  z-index: 10001 !important;
+/* Toggle button styles */
+#sidebar-toggle {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif !important;
+}
+
+#sidebar-toggle:hover {
+  transform: translateY(-1px) !important;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15) !important;
+}
+
+#sidebar-toggle:active {
+  transform: translateY(0) !important;
 }
 
 /* Gmail layout adjustments */
-[role="main"], .nH {
-  transition: margin-right 0.3s ease !important;
+[role="main"], .nH, .no, .nH.w-asV.aiw {
+  transition: margin-right 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94) !important;
 }
 
-/* Scrollbar styling */
-#ai-email-sidebar #email-list::-webkit-scrollbar {
-  width: 6px;
+/* Scrollbar styling for search results */
+#search-results::-webkit-scrollbar {
+  width: 6px !important;
 }
 
-#ai-email-sidebar #email-list::-webkit-scrollbar-track {
-  background: #f3f4f6;
-  border-radius: 3px;
+#search-results::-webkit-scrollbar-track {
+  background: #f8f9fa !important;
+  border-radius: 3px !important;
 }
 
-#ai-email-sidebar #email-list::-webkit-scrollbar-thumb {
-  background: #d1d5db;
-  border-radius: 3px;
+#search-results::-webkit-scrollbar-thumb {
+  background: #d1d5db !important;
+  border-radius: 3px !important;
 }
 
-#ai-email-sidebar #email-list::-webkit-scrollbar-thumb:hover {
-  background: #9ca3af;
+#search-results::-webkit-scrollbar-thumb:hover {
+  background: #9ca3af !important;
+}
+
+/* Input focus states */
+#ai-sidebar input:focus {
+  outline: none !important;
+  border-color: #000000 !important;
+  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.1) !important;
 }
 
 /* Button focus states */
-#ai-email-sidebar button:focus {
-  outline: 2px solid #1f2937 !important;
+#ai-sidebar button:focus {
+  outline: 2px solid #000000 !important;
   outline-offset: 2px !important;
 }
 
-/* Toggle switch animations */
-#ai-email-sidebar input:checked + span {
-  background-color: #1f2937 !important;
+/* Account menu animations */
+#account-menu {
+  opacity: 0 !important;
+  transform: translateY(-8px) !important;
+  transition: all 0.2s ease !important;
 }
 
-#ai-email-sidebar input:checked + span + span {
-  transform: translateX(20px) !important;
+#account-menu[style*="block"] {
+  opacity: 1 !important;
+  transform: translateY(0) !important;
 }
 
-/* Hover effects */
-#ai-email-sidebar button:hover {
+/* Search result hover effects */
+.search-result-item {
+  transition: all 0.2s ease !important;
+}
+
+.search-result-item:hover {
   transform: translateY(-1px) !important;
 }
 
-/* Responsive design */
-@media (max-width: 1200px) {
-  #ai-email-sidebar {
-    width: 300px !important;
+/* Quick search button effects */
+.quick-search {
+  transition: all 0.2s ease !important;
+}
+
+.quick-search:active {
+  transform: scale(0.98) !important;
+}
+
+/* Loading states */
+.loading-pulse {
+  animation: pulse 1.5s ease-in-out infinite !important;
+}
+
+@keyframes pulse {
+  0% {
+    opacity: 1;
   }
-  
-  [role="main"], .nH {
-    margin-right: 300px !important;
+  50% {
+    opacity: 0.5;
+  }
+  100% {
+    opacity: 1;
   }
 }
 
-/* Print styles */
-@media print {
-  #ai-email-sidebar,
-  #ai-toggle-btn {
-    display: none !important;
+/* Responsive design */
+@media (max-width: 1400px) {
+  #ai-sidebar {
+    width: 350px !important;
   }
   
-  [role="main"],
-  .nH {
-    margin-right: 0 !important;
+  #sidebar-toggle {
+    right: 20px !important;
+  }
+  
+  #sidebar-toggle[style*="370px"] {
+    right: 370px !important;
+  }
+  
+  [role="main"], .nH, .no, .nH.w-asV.aiw {
+    margin-right: 350px !important;
+  }
+}
+
+@media (max-width: 1200px) {
+  #ai-sidebar {
+    width: 320px !important;
+  }
+  
+  #sidebar-toggle[style*="420px"] {
+    right: 340px !important;
+  }
+  
+  [role="main"], .nH, .no, .nH.w-asV.aiw {
+    margin-right: 320px !important;
+  }
+}
+
+/* High contrast mode */
+@media (prefers-contrast: high) {
+  #ai-sidebar {
+    border-left: 2px solid #000000 !important;
+  }
+  
+  #ai-sidebar button {
+    border: 1px solid #000000 !important;
+  }
+  
+  #ai-sidebar input {
+    border: 2px solid #000000 !important;
   }
 }
 
 /* Reduced motion */
 @media (prefers-reduced-motion: reduce) {
-  #ai-email-sidebar,
-  #ai-email-sidebar *,
+  #ai-sidebar,
+  #sidebar-toggle,
   [role="main"],
-  .nH {
+  .nH,
+  .no,
+  .nH.w-asV.aiw,
+  .quick-search,
+  .search-result-item,
+  #account-menu {
     transition: none !important;
     animation: none !important;
   }
+}
+
+/* Print styles */
+@media print {
+  #ai-sidebar,
+  #sidebar-toggle {
+    display: none !important;
+  }
+  
+  [role="main"],
+  .nH,
+  .no,
+  .nH.w-asV.aiw {
+    margin-right: 0 !important;
+  }
+}
+
+/* Dark mode compatibility (if Gmail ever adds it) */
+@media (prefers-color-scheme: dark) {
+  #ai-sidebar {
+    background: #ffffff !important;
+    border-left-color: #000000 !important;
+  }
+}
+
+/* Ensure proper z-index layering */
+#ai-sidebar {
+  z-index: 999999 !important;
+}
+
+#sidebar-toggle {
+  z-index: 999998 !important;
+}
+
+#account-menu {
+  z-index: 1000000 !important;
+}
+
+/* Override any Gmail styles that might interfere */
+#ai-sidebar,
+#ai-sidebar *,
+#sidebar-toggle {
+  font-size: inherit !important;
+  font-weight: inherit !important;
+  text-transform: none !important;
+  letter-spacing: normal !important;
+  text-decoration: none !important;
+  background-clip: padding-box !important;
+}
+
+/* Ensure sidebar stays above Gmail content */
+body.gmail-has-sidebar [role="main"],
+body.gmail-has-sidebar .nH,
+body.gmail-has-sidebar .no,
+body.gmail-has-sidebar .nH.w-asV.aiw {
+  position: relative !important;
+  z-index: 1 !important;
+}
+
+/* Smooth transitions for all interactive elements */
+#ai-sidebar button,
+#ai-sidebar input,
+.quick-search {
+  transition: all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94) !important;
+}
+
+/* Professional typography */
+#ai-sidebar {
+  font-optical-sizing: auto !important;
+  -webkit-font-smoothing: antialiased !important;
+  -moz-osx-font-smoothing: grayscale !important;
+  text-rendering: optimizeLegibility !important;
 }

@@ -1,19 +1,19 @@
 {
   "manifest_version": 3,
-  "name": "AI Email Agent for Gmail",
-  "version": "8.0",
-  "description": "AI-powered email responses directly in Gmail",
+  "name": "Gmail Assistant - Professional Email Intelligence",
+  "version": "9.0",
+  "description": "Professional Gmail extension with Google OAuth, email syncing, and intelligent vector search",
   "permissions": [
     "storage",
     "activeTab",
-    "notifications",
     "tabs",
     "windows"
   ],
   "host_permissions": [
     "https://mail.google.com/*",
     "https://www.googleapis.com/*",
-    "http://localhost:3000/*"
+    "http://localhost:3000/*",
+    "https://accounts.google.com/*"
   ],
   "background": {
     "service_worker": "background.js"
@@ -33,6 +33,11 @@
   },
   "action": {
     "default_popup": "popup.html",
-    "default_title": "AI Email Agent"
+    "default_title": "Gmail Assistant"
+  },
+  "externally_connectable": {
+    "matches": [
+      "http://localhost:3000/*"
+    ]
   }
 }

@@ -62,37 +62,15 @@ export async function GET(request: NextRequest) {
         </div>
         
         <script>
-            // Store tokens in localStorage for the parent window
-            localStorage.setItem('gmail_tokens', '${JSON.stringify(tokens).replace(/'/g, "\\'")}');
-            localStorage.setItem('gmail_user_email', '${userEmail}');
+            // Simple approach - just redirect with tokens in URL
+            const redirectUrl = 'http://localhost:3000/auth-success?tokens=' + 
+                              encodeURIComponent('${JSON.stringify(tokens)}') + 
+                              '&email=' + encodeURIComponent('${userEmail}');
             
-            // Send message to Chrome extension via extension messaging
-            if (chrome && chrome.runtime) {
-                // This is inside a Chrome extension context
-                chrome.runtime.sendMessage({
-                    action: 'auth_complete',
-                    tokens: ${JSON.stringify(tokens)},
-                    userEmail: '${userEmail}'
-                });
-            } else {
-                // Fallback: Try to communicate with parent window
-                if (window.opener) {
-                    try {
-                        window.opener.postMessage({
-                            type: 'GMAIL_AUTH_SUCCESS',
-                            tokens: ${JSON.stringify(tokens)},
-                            userEmail: '${userEmail}'
-                        }, '*');
-                    } catch (error) {
-                        console.log('Could not communicate with parent window:', error);
-                    }
-                }
-            }
-            
-            // Auto-close after 2 seconds
+            // Redirect after showing success
             setTimeout(() => {
-                window.close();
-            }, 2000);
+                window.location.href = redirectUrl;
+            }, 1500);
         </script>
     </body>
     </html>`;

@@ -3,7 +3,7 @@ import { OAuth2Client } from 'google-auth-library';
 
 export class GoogleAPIService {
   private oauth2Client: OAuth2Client;
-  private gmail: any;
+  gmail: any;
   private calendar: any;
 
   constructor() {
@@ -237,7 +237,7 @@ export class GoogleAPIService {
   }
 
   // Parse detailed email data
-  private parseDetailedEmailData(emailData: any) {
+  parseDetailedEmailData(emailData: any) {
     const headers = emailData.payload.headers || [];
     const getHeader = (name: string) => headers.find((h: any) => h.name.toLowerCase() === name.toLowerCase())?.value || '';
 

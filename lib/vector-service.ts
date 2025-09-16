@@ -44,7 +44,7 @@ export async function generateEmbedding(text: string): Promise<number[]> {
       throw new Error('Text cannot be empty');
     }
 
-    console.log(`🔄 Generating embedding for text: "${text.substring(0, 100)}..."`);
+    // Removed verbose logging for performance
     
     const response = await openai.embeddings.create({
       model: "text-embedding-3-small", // 1536 dimensions, cost-effective
@@ -52,7 +52,7 @@ export async function generateEmbedding(text: string): Promise<number[]> {
     });
 
     const embedding = response.data[0].embedding;
-    console.log(`✅ Generated embedding with ${embedding.length} dimensions`);
+    // Removed verbose logging for performance
     
     return embedding;
   } catch (error) {
@@ -70,7 +70,7 @@ export async function storeVector(
   try {
     await initializePinecone();
     
-    console.log(`📤 Storing vector for ID: ${id}`);
+    // Removed verbose logging for performance
     
     // Generate embedding
     const embedding = await generateEmbedding(text);
@@ -88,7 +88,7 @@ export async function storeVector(
       },
     ]);
 
-    console.log(`✅ Vector stored successfully: ${id}`);
+    // Removed verbose logging for performance
     return true;
   } catch (error) {
     console.error(`❌ Error storing vector ${id}:`, error);
@@ -100,7 +100,8 @@ export async function storeVector(
 export async function searchVectors(
   query: string,
   topK: number = 10,
-  filter: Record<string, any> = {}
+  filter: Record<string, any> = {},
+  namespace?: string
 ) {
   try {
     await initializePinecone();
@@ -123,7 +124,10 @@ export async function searchVectors(
       searchRequest.filter = filter;
     }
 
-    const results = await vectorIndex.query(searchRequest);
+    // Query with namespace if provided
+    const results = namespace
+      ? await vectorIndex.namespace(namespace).query(searchRequest)
+      : await vectorIndex.query(searchRequest);
     
     console.log(`✅ Found ${results.matches?.length || 0} similar vectors`);
     
@@ -198,7 +202,8 @@ export async function batchStoreVectors(
     id: string;
     text: string;
     metadata?: Record<string, any>;
-  }>
+  }>,
+  namespace?: string
 ) {
   try {
     await initializePinecone();
@@ -211,12 +216,15 @@ export async function batchStoreVectors(
     for (let i = 0; i < vectors.length; i += batchSize) {
       const batch = vectors.slice(i, i + batchSize);
       
-      console.log(`📦 Processing batch ${Math.floor(i / batchSize) + 1}/${Math.ceil(vectors.length / batchSize)} (${i + batch.length}/${vectors.length} emails)`);
+      // Log only every 100 emails for performance
+      if (i % 100 === 0 || i + batch.length === vectors.length) {
+        console.log(`📦 Processing: ${i + batch.length}/${vectors.length} emails (${Math.round((i + batch.length) / vectors.length * 100)}%)`);
+      }
       
       // Generate embeddings for batch with progress
       const vectorData = await Promise.all(
         batch.map(async (item, idx) => {
-          console.log(`  🔄 Processing email ${i + idx + 1}/${vectors.length}: ${item.metadata?.subject?.substring(0, 50)}...`);
+          // Removed per-email logging for performance
           const embedding = await generateEmbedding(item.text);
           return {
             id: item.id,
@@ -230,8 +238,12 @@ export async function batchStoreVectors(
         })
       );
       
-      // Upsert batch to Pinecone
-      await vectorIndex.upsert(vectorData);
+      // Upsert batch to Pinecone with namespace
+      if (namespace) {
+        await vectorIndex.namespace(namespace).upsert(vectorData);
+      } else {
+        await vectorIndex.upsert(vectorData);
+      }
       results.push(...vectorData.map(v => v.id));
       
       // Small delay to avoid rate limits

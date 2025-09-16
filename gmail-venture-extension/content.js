@@ -1,465 +1,587 @@
-// AI Email Agent - Improved UI with Account Management
-console.log('🤖 AI Email Agent loaded');
+// AI Email Agent - Professional Gmail Extension
+console.log('🎯 AI Email Agent content script loaded!');
+console.log('Current page:', window.location.href);
 
-let sidebarVisible = false;
+// Debug: Check if we're on the right page
+if (window.location.hostname.includes('mail.google.com')) {
+  console.log('✅ We are on Gmail!');
+} else {
+  console.log('❌ Not on Gmail:', window.location.hostname);
+}
+
+// State management
+let sidebarExpanded = false;
 let isAuthenticated = false;
 let userEmail = '';
 let accessToken = null;
-let totalEmailsSynced = 0;
-let isSearching = false;
-let lastSyncTime = null;
+let syncProgress = 0;
+let totalEmailsToSync = 1000;
+let emailsSynced = 0;
+let isSyncing = false;
+let searchResults = [];
 
-// Create toggle button
-function createToggleButton() {
-  const existingBtn = document.getElementById('ai-email-toggle-btn');
-  if (existingBtn) return;
-
-  const button = document.createElement('div');
-  button.id = 'ai-email-toggle-btn';
-  button.innerHTML = `
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-      <circle cx="12" cy="12" r="10"></circle>
-      <path d="M12 2a7 7 0 1 0 0 14 7 7 0 1 0 0-14"></path>
-      <path d="M12 8v8"></path>
-      <path d="M8 12h8"></path>
-    </svg>
-  `;
-  button.style.cssText = `
-    position: fixed;
-    right: ${sidebarVisible ? '420px' : '20px'};
-    top: 80px;
-    width: 40px;
-    height: 40px;
-    background: #1f2937;
-    color: white;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-    transition: all 0.3s ease;
-    z-index: 9999;
-  `;
-  
-  button.addEventListener('click', toggleSidebar);
-  document.body.appendChild(button);
-}
-
-// Create sidebar
+// Create and manage sidebar
 function createSidebar() {
-  const existingSidebar = document.getElementById('ai-email-sidebar');
+  // Remove existing sidebar if any
+  const existingSidebar = document.getElementById('ai-sidebar');
   if (existingSidebar) {
     existingSidebar.remove();
   }
 
   const sidebar = document.createElement('div');
-  sidebar.id = 'ai-email-sidebar';
+  sidebar.id = 'ai-sidebar';
   sidebar.style.cssText = `
     position: fixed;
-    right: ${sidebarVisible ? '0' : '-400px'};
     top: 0;
+    right: ${sidebarExpanded ? '0' : '-400px'};
     width: 400px;
     height: 100vh;
     background: #ffffff;
-    box-shadow: -2px 0 8px rgba(0,0,0,0.1);
-    transition: right 0.3s ease;
-    z-index: 9998;
+    border-left: 1px solid #000000;
+    transition: right 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    z-index: 999999;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
     display: flex;
     flex-direction: column;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    box-shadow: -4px 0 24px rgba(0, 0, 0, 0.1);
   `;
+
+  sidebar.innerHTML = generateSidebarContent();
+  document.body.appendChild(sidebar);
   
-  sidebar.innerHTML = `
-    <!-- Header -->
-    <div style="
-      padding: 20px;
-      border-bottom: 1px solid #e5e7eb;
-      background: #f9fafb;
-    ">
-      <div style="display: flex; align-items: center; justify-content: space-between;">
-        <div style="display: flex; align-items: center; gap: 12px;">
+  // Adjust Gmail layout
+  adjustGmailLayout();
+  
+  // Setup event listeners
+  setupEventListeners();
+}
+
+function generateSidebarContent() {
+  if (!isAuthenticated) {
+    return `
+      <div style="
+        padding: 32px 24px;
+        text-align: center;
+        background: #000000;
+        color: #ffffff;
+        border-bottom: 1px solid #333333;
+      ">
+        <div style="font-size: 24px; font-weight: 600; margin-bottom: 8px;">
+          Gmail Assistant
+        </div>
+        <div style="font-size: 14px; opacity: 0.8;">
+          Intelligent Email Management
+        </div>
+      </div>
+
+      <div style="
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        padding: 40px 24px;
+      ">
+        <div style="
+          width: 80px;
+          height: 80px;
+          border: 2px solid #000000;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          margin-bottom: 24px;
+          font-size: 32px;
+        ">
+          G
+        </div>
+        
+        <div style="
+          font-size: 18px;
+          font-weight: 600;
+          margin-bottom: 8px;
+          color: #000000;
+        ">
+          Connect Your Gmail
+        </div>
+        
+        <div style="
+          font-size: 14px;
+          color: #666666;
+          margin-bottom: 32px;
+          text-align: center;
+          line-height: 1.5;
+        ">
+          Securely authenticate with Google to sync your emails and enable intelligent search
+        </div>
+        
+        <button id="auth-button" style="
+          width: 100%;
+          max-width: 280px;
+          padding: 16px 24px;
+          background: #000000;
+          color: #ffffff;
+          border: none;
+          border-radius: 8px;
+          font-size: 16px;
+          font-weight: 500;
+          cursor: pointer;
+          transition: all 0.2s ease;
+        ">
+          Sign in with Google
+        </button>
+      </div>
+
+      <div style="
+        padding: 16px 24px;
+        background: #f8f9fa;
+        border-top: 1px solid #e5e7eb;
+        font-size: 12px;
+        color: #666666;
+        text-align: center;
+      ">
+        Secure • Private • Professional
+      </div>
+    `;
+  }
+
+  if (isSyncing) {
+    return `
+      <div style="
+        padding: 32px 24px;
+        text-align: center;
+        background: #000000;
+        color: #ffffff;
+        border-bottom: 1px solid #333333;
+      ">
+        <div style="font-size: 24px; font-weight: 600; margin-bottom: 8px;">
+          Gmail Assistant
+        </div>
+        <div style="font-size: 14px; opacity: 0.8;">
+          ${userEmail}
+        </div>
+      </div>
+
+      <div style="
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        padding: 40px 24px;
+      ">
+        <div style="
+          width: 80px;
+          height: 80px;
+          border: 2px solid #000000;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          margin-bottom: 24px;
+          font-size: 16px;
+          font-weight: 600;
+        ">
+          ${Math.round((emailsSynced / totalEmailsToSync) * 100)}%
+        </div>
+        
+        <div style="
+          font-size: 18px;
+          font-weight: 600;
+          margin-bottom: 8px;
+          color: #000000;
+        ">
+          Syncing Emails
+        </div>
+        
+        <div style="
+          font-size: 14px;
+          color: #666666;
+          margin-bottom: 32px;
+          text-align: center;
+        ">
+          ${emailsSynced} of ${totalEmailsToSync} emails processed
+        </div>
+        
+        <div style="
+          width: 100%;
+          max-width: 280px;
+          height: 8px;
+          background: #f0f0f0;
+          border-radius: 4px;
+          overflow: hidden;
+          margin-bottom: 16px;
+        ">
           <div style="
-            width: 40px;
-            height: 40px;
-            background: #1f2937;
-            border-radius: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-size: 20px;
-          ">🤖</div>
-          <div>
-            <h2 style="margin: 0; font-size: 18px; font-weight: 600; color: #1f2937;">
-              AI Email Agent
-            </h2>
-            <p style="margin: 0; font-size: 14px; color: #6b7280;">
-              Semantic Search & Smart Sync
-            </p>
-          </div>
+            height: 100%;
+            background: #000000;
+            width: ${(emailsSynced / totalEmailsToSync) * 100}%;
+            transition: width 0.3s ease;
+          "></div>
+        </div>
+        
+        <div style="
+          font-size: 12px;
+          color: #999999;
+        ">
+          This may take a few minutes...
+        </div>
+      </div>
+
+      <div style="
+        padding: 16px 24px;
+        background: #f8f9fa;
+        border-top: 1px solid #e5e7eb;
+        font-size: 12px;
+        color: #666666;
+        text-align: center;
+      ">
+        Building vector database for intelligent search
+      </div>
+    `;
+  }
+
+  return `
+    <div style="
+      padding: 24px;
+      background: #000000;
+      color: #ffffff;
+      border-bottom: 1px solid #333333;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    ">
+      <div>
+        <div style="font-size: 18px; font-weight: 600; margin-bottom: 4px;">
+          Gmail Assistant
+        </div>
+        <div style="font-size: 12px; opacity: 0.8;">
+          ${userEmail}
+        </div>
+      </div>
+      <div style="position: relative;">
+        <button id="account-menu-btn" style="
+          width: 32px;
+          height: 32px;
+          background: rgba(255, 255, 255, 0.1);
+          border: 1px solid rgba(255, 255, 255, 0.2);
+          border-radius: 6px;
+          color: #ffffff;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 14px;
+        ">⚙</button>
+        
+        <div id="account-menu" style="
+          position: absolute;
+          top: 40px;
+          right: 0;
+          background: #ffffff;
+          border: 1px solid #e5e7eb;
+          border-radius: 8px;
+          box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+          min-width: 180px;
+          display: none;
+          z-index: 1000;
+        ">
+          <button id="switch-account-btn" style="
+            width: 100%;
+            padding: 12px 16px;
+            background: none;
+            border: none;
+            text-align: left;
+            font-size: 14px;
+            color: #374151;
+            cursor: pointer;
+            border-bottom: 1px solid #f3f4f6;
+          ">
+            Switch Account
+          </button>
+          <button id="resync-btn" style="
+            width: 100%;
+            padding: 12px 16px;
+            background: none;
+            border: none;
+            text-align: left;
+            font-size: 14px;
+            color: #374151;
+            cursor: pointer;
+          ">
+            Resync Emails
+          </button>
         </div>
       </div>
     </div>
 
-    <!-- Account Section -->
     <div style="
-      padding: 16px 20px;
-      background: ${isAuthenticated ? '#f0f9ff' : '#fef3c7'};
-      border-bottom: 1px solid ${isAuthenticated ? '#bae6fd' : '#fcd34d'};
+      padding: 24px;
+      border-bottom: 1px solid #e5e7eb;
     ">
-      ${!isAuthenticated ? `
-        <!-- Not Authenticated -->
-        <div>
-          <h3 style="margin: 0 0 12px 0; font-size: 15px; color: #92400e;">
-            Connect Gmail Account
-          </h3>
-          <div style="display: flex; gap: 8px;">
-            <input type="email" id="email-input" placeholder="your.email@gmail.com" style="
-              flex: 1;
-              padding: 8px 12px;
-              border: 1px solid #fbbf24;
-              border-radius: 6px;
-              font-size: 14px;
-            "/>
-            <button id="auth-btn" style="
-              padding: 8px 16px;
-              background: #f59e0b;
-              color: white;
-              border: none;
-              border-radius: 6px;
-              font-size: 14px;
-              font-weight: 500;
-              cursor: pointer;
-            ">Connect</button>
-          </div>
-        </div>
-      ` : `
-        <!-- Authenticated -->
-        <div>
-          <div style="display: flex; justify-content: space-between; align-items: start;">
-            <div>
-              <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
-                <span style="color: #10b981; font-size: 16px;">✓</span>
-                <span style="font-weight: 600; color: #065f46;">${userEmail}</span>
-              </div>
-              <div style="font-size: 13px; color: #047857;">
-                ${totalEmailsSynced} emails indexed
-                ${lastSyncTime ? ` • Last sync: ${new Date(lastSyncTime).toLocaleTimeString()}` : ''}
-              </div>
-            </div>
-            <button id="account-menu-btn" style="
-              background: white;
-              border: 1px solid #d1fae5;
-              color: #065f46;
-              padding: 4px 12px;
-              border-radius: 6px;
-              font-size: 13px;
-              cursor: pointer;
-            ">⚙️</button>
-          </div>
-          
-          <!-- Account Menu (hidden by default) -->
-          <div id="account-menu" style="
-            display: none;
-            position: absolute;
-            right: 20px;
-            top: 60px;
-            background: white;
-            border: 1px solid #e5e7eb;
-            border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-            z-index: 10;
-          ">
-            <button id="switch-account-btn" style="
-              display: block;
-              width: 100%;
-              padding: 10px 16px;
-              background: none;
-              border: none;
-              text-align: left;
-              cursor: pointer;
-              font-size: 14px;
-              color: #374151;
-              border-bottom: 1px solid #e5e7eb;
-            ">🔄 Switch Account</button>
-            <button id="resync-btn" style="
-              display: block;
-              width: 100%;
-              padding: 10px 16px;
-              background: none;
-              border: none;
-              text-align: left;
-              cursor: pointer;
-              font-size: 14px;
-              color: #374151;
-              border-bottom: 1px solid #e5e7eb;
-            ">🔄 Re-sync Emails</button>
-            <button id="disconnect-btn" style="
-              display: block;
-              width: 100%;
-              padding: 10px 16px;
-              background: none;
-              border: none;
-              text-align: left;
-              cursor: pointer;
-              font-size: 14px;
-              color: #dc2626;
-            ">🚪 Disconnect</button>
-          </div>
-        </div>
-      `}
-    </div>
-
-    <!-- Main Content -->
-    <div style="flex: 1; overflow-y: auto;">
-      ${isAuthenticated ? `
-        <!-- Quick Actions -->
-        <div style="padding: 16px 20px; border-bottom: 1px solid #e5e7eb;">
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
-            <button id="sync-new-btn" style="
-              padding: 10px;
-              background: #4f46e5;
-              color: white;
-              border: none;
-              border-radius: 6px;
-              font-size: 14px;
-              font-weight: 500;
-              cursor: pointer;
-              display: flex;
-              align-items: center;
-              justify-content: center;
-              gap: 6px;
-            ">
-              <span>🔄</span>
-              <span>Sync New</span>
-            </button>
-            <button id="sync-all-btn" style="
-              padding: 10px;
-              background: #7c3aed;
-              color: white;
-              border: none;
-              border-radius: 6px;
-              font-size: 14px;
-              font-weight: 500;
-              cursor: pointer;
-              display: flex;
-              align-items: center;
-              justify-content: center;
-              gap: 6px;
-            ">
-              <span>🚀</span>
-              <span>Full Sync</span>
-            </button>
-          </div>
-          
-          <div id="sync-progress" style="display: none; margin-top: 12px;">
-            <div style="
-              background: #e5e7eb;
-              height: 4px;
-              border-radius: 2px;
-              overflow: hidden;
-            ">
-              <div id="progress-bar" style="
-                background: #4f46e5;
-                height: 100%;
-                width: 0%;
-                transition: width 0.3s ease;
-              "></div>
-            </div>
-            <p id="sync-status" style="
-              margin: 8px 0 0 0;
-              font-size: 12px;
-              color: #6b7280;
-              text-align: center;
-            ">Syncing...</p>
-          </div>
-        </div>
-
-        <!-- Search Section -->
-        <div style="padding: 20px;">
-          <h3 style="margin: 0 0 16px 0; font-size: 16px; color: #1f2937;">
-            🔍 Semantic Search
-          </h3>
-          
-          <div style="position: relative; margin-bottom: 12px;">
-            <input type="text" id="search-input" placeholder="Search emails naturally..." style="
-              width: 100%;
-              padding: 10px 40px 10px 12px;
-              border: 1px solid #d1d5db;
-              border-radius: 8px;
-              font-size: 14px;
-              box-sizing: border-box;
-              transition: all 0.2s;
-            "/>
-            <button id="search-btn" style="
-              position: absolute;
-              right: 4px;
-              top: 50%;
-              transform: translateY(-50%);
-              background: none;
-              border: none;
-              color: #6b7280;
-              cursor: pointer;
-              padding: 6px;
-            ">🔍</button>
-          </div>
-
-          <!-- Quick Searches -->
-          <div style="display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 16px;">
-            <button class="quick-search" data-query="recent emails" style="
-              padding: 5px 12px;
-              background: #f3f4f6;
-              border: 1px solid #e5e7eb;
-              border-radius: 16px;
-              font-size: 12px;
-              cursor: pointer;
-              transition: all 0.2s;
-            ">Recent</button>
-            <button class="quick-search" data-query="important emails" style="
-              padding: 5px 12px;
-              background: #f3f4f6;
-              border: 1px solid #e5e7eb;
-              border-radius: 16px;
-              font-size: 12px;
-              cursor: pointer;
-              transition: all 0.2s;
-            ">Important</button>
-            <button class="quick-search" data-query="unread emails" style="
-              padding: 5px 12px;
-              background: #f3f4f6;
-              border: 1px solid #e5e7eb;
-              border-radius: 16px;
-              font-size: 12px;
-              cursor: pointer;
-              transition: all 0.2s;
-            ">Unread</button>
-            <button class="quick-search" data-query="emails from today" style="
-              padding: 5px 12px;
-              background: #f3f4f6;
-              border: 1px solid #e5e7eb;
-              border-radius: 16px;
-              font-size: 12px;
-              cursor: pointer;
-              transition: all 0.2s;
-            ">Today</button>
-            <button class="quick-search" data-query="job applications" style="
-              padding: 5px 12px;
-              background: #f3f4f6;
-              border: 1px solid #e5e7eb;
-              border-radius: 16px;
-              font-size: 12px;
-              cursor: pointer;
-              transition: all 0.2s;
-            ">Jobs</button>
-          </div>
-
-          <!-- Search Results -->
-          <div id="search-results" style="
-            max-height: calc(100vh - 450px);
-            overflow-y: auto;
-          ">
-            <p style="text-align: center; color: #9ca3af; font-size: 14px;">
-              Search your ${totalEmailsSynced} indexed emails...
-            </p>
-          </div>
-        </div>
-      ` : `
-        <!-- Not Authenticated State -->
-        <div style="
-          flex: 1;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          padding: 40px;
+      <div style="
+        font-size: 14px;
+        font-weight: 600;
+        margin-bottom: 16px;
+        color: #000000;
+      ">
+        Vector Search
+      </div>
+      
+      <div style="position: relative; margin-bottom: 16px;">
+        <input type="text" id="search-input" placeholder="Search emails semantically..." style="
+          width: 100%;
+          padding: 12px 16px;
+          border: 1px solid #d1d5db;
+          border-radius: 8px;
+          font-size: 14px;
+          background: #ffffff;
+          box-sizing: border-box;
+        " />
+        <button id="search-btn" style="
+          position: absolute;
+          right: 8px;
+          top: 50%;
+          transform: translateY(-50%);
+          width: 32px;
+          height: 32px;
+          background: #000000;
+          border: none;
+          border-radius: 6px;
+          color: #ffffff;
+          cursor: pointer;
+          font-size: 14px;
+        ">→</button>
+      </div>
+      
+      <div style="
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+        margin-bottom: 16px;
+      ">
+        <button class="quick-search" data-query="recent important emails" style="
+          padding: 8px 12px;
+          background: #f8f9fa;
+          border: 1px solid #e5e7eb;
+          border-radius: 6px;
+          font-size: 12px;
+          cursor: pointer;
+          color: #374151;
         ">
-          <div style="text-align: center;">
-            <div style="font-size: 48px; margin-bottom: 16px;">🔒</div>
-            <p style="color: #6b7280; font-size: 16px;">Connect your Gmail to start</p>
-          </div>
-        </div>
-      `}
+          Recent
+        </button>
+        <button class="quick-search" data-query="unread emails" style="
+          padding: 8px 12px;
+          background: #f8f9fa;
+          border: 1px solid #e5e7eb;
+          border-radius: 6px;
+          font-size: 12px;
+          cursor: pointer;
+          color: #374151;
+        ">
+          Unread
+        </button>
+        <button class="quick-search" data-query="meeting invitations" style="
+          padding: 8px 12px;
+          background: #f8f9fa;
+          border: 1px solid #e5e7eb;
+          border-radius: 6px;
+          font-size: 12px;
+          cursor: pointer;
+          color: #374151;
+        ">
+          Meetings
+        </button>
+        <button class="quick-search" data-query="urgent important" style="
+          padding: 8px 12px;
+          background: #f8f9fa;
+          border: 1px solid #e5e7eb;
+          border-radius: 6px;
+          font-size: 12px;
+          cursor: pointer;
+          color: #374151;
+        ">
+          Urgent
+        </button>
+      </div>
+      
+      <div style="
+        font-size: 12px;
+        color: #666666;
+        text-align: center;
+      ">
+        ${emailsSynced} emails indexed
+      </div>
     </div>
 
-    <!-- Footer -->
+    <div id="search-results" style="
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px 24px;
+    ">
+      <div style="
+        text-align: center;
+        color: #999999;
+        font-size: 14px;
+        margin-top: 40px;
+      ">
+        Enter a search query to find relevant emails
+      </div>
+    </div>
+
     <div style="
-      padding: 12px 20px;
-      background: #f9fafb;
+      padding: 16px 24px;
+      background: #f8f9fa;
       border-top: 1px solid #e5e7eb;
       font-size: 12px;
-      color: #9ca3af;
+      color: #666666;
       text-align: center;
     ">
-      Secure • Private • AI-Powered
+      Professional Email Intelligence
     </div>
   `;
-  
-  document.body.appendChild(sidebar);
-  setupEventListeners();
 }
 
-// Toggle sidebar
+function createToggleButton() {
+  console.log('📍 Creating toggle button...');
+  
+  const existingBtn = document.getElementById('sidebar-toggle');
+  if (existingBtn) {
+    console.log('🔄 Removing existing toggle button');
+    existingBtn.remove();
+  }
+
+  if (!document.body) {
+    console.error('❌ Document body not available, cannot create toggle button');
+    return;
+  }
+
+  const button = document.createElement('button');
+  button.id = 'sidebar-toggle';
+  button.innerHTML = sidebarExpanded ? '→' : '←';
+  button.style.cssText = `
+    position: fixed !important;
+    top: 20px !important;
+    right: ${sidebarExpanded ? '420px' : '20px'} !important;
+    width: 40px !important;
+    height: 40px !important;
+    background: #000000 !important;
+    color: #ffffff !important;
+    border: none !important;
+    border-radius: 8px !important;
+    cursor: pointer !important;
+    font-size: 16px !important;
+    font-weight: 600 !important;
+    transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94) !important;
+    z-index: 999998 !important;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1) !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  `;
+
+  button.addEventListener('click', toggleSidebar);
+  button.addEventListener('mouseover', () => {
+    button.style.background = '#333333';
+  });
+  button.addEventListener('mouseout', () => {
+    button.style.background = '#000000';
+  });
+
+  try {
+    document.body.appendChild(button);
+    console.log('✅ Toggle button created and added to DOM');
+    
+    // Verify it's actually in the DOM
+    const verifyBtn = document.getElementById('sidebar-toggle');
+    if (verifyBtn) {
+      console.log('✅ Toggle button verified in DOM');
+    } else {
+      console.error('❌ Toggle button not found in DOM after creation');
+    }
+  } catch (error) {
+    console.error('❌ Error adding toggle button to DOM:', error);
+  }
+}
+
 function toggleSidebar() {
-  sidebarVisible = !sidebarVisible;
-  const sidebar = document.getElementById('ai-email-sidebar');
-  const toggleBtn = document.getElementById('ai-email-toggle-btn');
+  sidebarExpanded = !sidebarExpanded;
+  
+  const sidebar = document.getElementById('ai-sidebar');
+  const toggleBtn = document.getElementById('sidebar-toggle');
   
   if (sidebar) {
-    sidebar.style.right = sidebarVisible ? '0' : '-400px';
+    sidebar.style.right = sidebarExpanded ? '0' : '-400px';
   }
   
   if (toggleBtn) {
-    toggleBtn.style.right = sidebarVisible ? '420px' : '20px';
+    toggleBtn.style.right = sidebarExpanded ? '420px' : '20px';
+    toggleBtn.innerHTML = sidebarExpanded ? '→' : '←';
+  }
+  
+  adjustGmailLayout();
+}
+
+function adjustGmailLayout() {
+  const gmailMain = document.querySelector('[role="main"]') || document.querySelector('.nH');
+  if (gmailMain) {
+    gmailMain.style.transition = 'margin-right 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
+    gmailMain.style.marginRight = sidebarExpanded ? '400px' : '0';
   }
 }
 
-// Setup event listeners
 function setupEventListeners() {
   // Auth button
-  const authBtn = document.getElementById('auth-btn');
+  const authBtn = document.getElementById('auth-button');
   if (authBtn) {
-    authBtn.addEventListener('click', handleAuth);
-  }
-
-  // Account menu button
-  const accountMenuBtn = document.getElementById('account-menu-btn');
-  if (accountMenuBtn) {
-    accountMenuBtn.addEventListener('click', () => {
-      const menu = document.getElementById('account-menu');
-      menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+    authBtn.addEventListener('click', handleGoogleAuth);
+    authBtn.addEventListener('mouseover', () => {
+      authBtn.style.background = '#333333';
+    });
+    authBtn.addEventListener('mouseout', () => {
+      authBtn.style.background = '#000000';
     });
   }
 
-  // Switch account button
+  // Account menu
+  const accountMenuBtn = document.getElementById('account-menu-btn');
+  const accountMenu = document.getElementById('account-menu');
+  if (accountMenuBtn && accountMenu) {
+    accountMenuBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      accountMenu.style.display = accountMenu.style.display === 'none' ? 'block' : 'none';
+    });
+    
+    document.addEventListener('click', () => {
+      accountMenu.style.display = 'none';
+    });
+  }
+
+  // Switch account and resync buttons (click and hover events)
   const switchAccountBtn = document.getElementById('switch-account-btn');
+  const resyncBtn = document.getElementById('resync-btn');
+  
   if (switchAccountBtn) {
     switchAccountBtn.addEventListener('click', handleSwitchAccount);
-  }
-
-  // Resync button
-  const resyncBtn = document.getElementById('resync-btn');
-  if (resyncBtn) {
-    resyncBtn.addEventListener('click', () => {
-      document.getElementById('account-menu').style.display = 'none';
-      handleSync(false); // Sync new emails only
+    // Add hover effects
+    switchAccountBtn.addEventListener('mouseover', () => {
+      switchAccountBtn.style.background = '#f9fafb';
+    });
+    switchAccountBtn.addEventListener('mouseout', () => {
+      switchAccountBtn.style.background = 'none';
     });
   }
 
-  // Disconnect button
-  const disconnectBtn = document.getElementById('disconnect-btn');
-  if (disconnectBtn) {
-    disconnectBtn.addEventListener('click', handleDisconnect);
-  }
-
-  // Sync buttons
-  const syncNewBtn = document.getElementById('sync-new-btn');
-  if (syncNewBtn) {
-    syncNewBtn.addEventListener('click', () => handleSync(false));
-  }
-
-  const syncAllBtn = document.getElementById('sync-all-btn');
-  if (syncAllBtn) {
-    syncAllBtn.addEventListener('click', () => handleSync(true));
+  if (resyncBtn) {
+    resyncBtn.addEventListener('click', handleResync);
+    // Add hover effects
+    resyncBtn.addEventListener('mouseover', () => {
+      resyncBtn.style.background = '#f9fafb';
+    });
+    resyncBtn.addEventListener('mouseout', () => {
+      resyncBtn.style.background = 'none';
+    });
   }
 
   // Search functionality
@@ -483,103 +605,121 @@ function setupEventListeners() {
   quickSearchBtns.forEach(btn => {
     btn.addEventListener('click', (e) => {
       const query = e.target.getAttribute('data-query');
-      document.getElementById('search-input').value = query;
-      handleSearch();
-    });
-  });
-
-  // Click outside to close account menu
-  document.addEventListener('click', (e) => {
-    const menu = document.getElementById('account-menu');
-    const menuBtn = document.getElementById('account-menu-btn');
-    if (menu && !menu.contains(e.target) && e.target !== menuBtn) {
-      menu.style.display = 'none';
-    }
-  });
-}
-
-// Handle authentication
-async function handleAuth() {
-  const emailInput = document.getElementById('email-input');
-  const email = emailInput.value.trim();
-  
-  if (!email || !email.includes('@')) {
-    alert('Please enter a valid email address');
-    return;
-  }
-
-  const authBtn = document.getElementById('auth-btn');
-  authBtn.textContent = '⏳';
-  authBtn.disabled = true;
-
-  try {
-    // Send message to background script to open auth window
-    chrome.runtime.sendMessage({
-      action: 'open_auth_window',
-      userEmail: email
-    }, (response) => {
-      if (response && response.success) {
-        // Auth window opened successfully
-        // Now we wait for the auth_success message from background script
-        authBtn.textContent = '⏳ Waiting for auth...';
-      } else {
-        alert('Failed to open authentication window. Please try again.');
-        authBtn.textContent = 'Connect';
-        authBtn.disabled = false;
+      const searchInput = document.getElementById('search-input');
+      if (searchInput) {
+        searchInput.value = query;
+        handleSearch();
       }
     });
+    
+    // Add hover effects
+    btn.addEventListener('mouseover', () => {
+      btn.style.background = '#f3f4f6';
+    });
+    btn.addEventListener('mouseout', () => {
+      btn.style.background = '#f8f9fa';
+    });
+  });
+  
+}
+
+async function handleGoogleAuth() {
+  try {
+    console.log('🔐 Authentication button clicked');
+    const authBtn = document.getElementById('auth-button');
+    if (authBtn) {
+      authBtn.textContent = 'Authenticating...';
+      authBtn.disabled = true;
+    }
+    
+    // Add a test to check if background script is available
+    if (!chrome.runtime?.id) {
+      console.error('❌ Extension context invalidated - reloading page');
+      // Reload the page to get fresh extension context
+      setTimeout(() => {
+        window.location.reload();
+      }, 1000);
+      return;
+    }
+
+    console.log('📡 Sending message to background script...');
+    const response = await chrome.runtime.sendMessage({ action: 'authenticate' });
+    console.log('📨 Response from background:', response);
+    
+    if (response && response.success) {
+      if (response.message === 'Auth window opened') {
+        if (authBtn) {
+          authBtn.textContent = 'Complete authentication in popup...';
+        }
+        // Just wait - don't do anything until we get auth_success message
+        console.log('Waiting for auth to complete in popup window...');
+      }
+    } else {
+      if (authBtn) {
+        authBtn.textContent = 'Sign in with Google';
+        authBtn.disabled = false;
+      }
+      console.error('❌ Auth failed:', response);
+    }
   } catch (error) {
-    console.error('Auth error:', error);
-    alert('Authentication failed. Please try again.');
-    authBtn.textContent = 'Connect';
-    authBtn.disabled = false;
+    console.error('❌ Auth error:', error);
+    const authBtn = document.getElementById('auth-button');
+    if (authBtn) {
+      authBtn.textContent = 'Sign in with Google';
+      authBtn.disabled = false;
+    }
+    if (error.message?.includes('port closed')) {
+      alert('Extension needs reload - please refresh the page');
+    } else {
+      alert('Authentication error - please try again');
+    }
   }
 }
 
-// Handle switch account
 function handleSwitchAccount() {
-  // Clear current auth
+  // Clear authentication state
   isAuthenticated = false;
   userEmail = '';
   accessToken = null;
-  totalEmailsSynced = 0;
-  lastSyncTime = null;
+  emailsSynced = 0;
+  isSyncing = false;
   
+  // Clear storage
   chrome.storage.local.clear();
   
-  // Close menu and refresh UI
-  document.getElementById('account-menu').style.display = 'none';
+  // Refresh UI
   createSidebar();
 }
 
-// Handle disconnect
-function handleDisconnect() {
-  if (confirm('Are you sure you want to disconnect? Your synced emails will remain in the database.')) {
-    handleSwitchAccount();
+async function handleResync() {
+  if (isSyncing) return;
+  
+  const menu = document.getElementById('account-menu');
+  if (menu) {
+    menu.style.display = 'none';
   }
+  
+  await startSync();
 }
 
-// Handle sync
-async function handleSync(fullSync = false) {
-  const syncProgress = document.getElementById('sync-progress');
-  const progressBar = document.getElementById('progress-bar');
-  const syncStatus = document.getElementById('sync-status');
+async function startSync() {
+  // Check if already syncing
+  if (isSyncing) {
+    console.log('Sync already in progress, skipping duplicate sync');
+    return;
+  }
   
-  syncProgress.style.display = 'block';
+  isSyncing = true;
+  emailsSynced = 0;
+  syncProgress = 0;
+  
+  createSidebar(); // Refresh to show sync UI
   
   try {
-    // Show progress
-    let progress = 0;
-    const progressInterval = setInterval(() => {
-      progress += 10;
-      if (progress <= 90) {
-        progressBar.style.width = progress + '%';
-        syncStatus.textContent = fullSync ? `Full sync... ${progress}%` : `Syncing new emails... ${progress}%`;
-      }
-    }, 500);
-
-    // Call sync API
-    const response = await fetch('http://localhost:3000/api/sync-gmail', {
+    console.log('Starting real email sync for user:', userEmail);
+    
+    // Use the streaming endpoint for real-time progress
+    const response = await fetch('http://localhost:3000/api/sync-gmail-stream', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -587,50 +727,104 @@ async function handleSync(fullSync = false) {
       body: JSON.stringify({
         tokens: { access_token: accessToken },
         userEmail: userEmail,
-        maxResults: fullSync ? 200 : 50,
-        syncType: fullSync ? 'full' : 'incremental',
+        maxResults: totalEmailsToSync,
+        namespace: userEmail // IMPORTANT: Use email as namespace to separate users
       }),
     });
 
-    const data = await response.json();
-    
-    clearInterval(progressInterval);
-    
-    if (data.success) {
-      progressBar.style.width = '100%';
-      syncStatus.textContent = `✅ Synced ${data.totalEmails} emails!`;
-      totalEmailsSynced += data.totalEmails;
-      lastSyncTime = new Date().toISOString();
-      
-      // Store updated count
-      chrome.storage.local.set({
-        totalEmailsSynced: totalEmailsSynced,
-        lastSyncTime: lastSyncTime,
-      });
-      
-      // Hide progress after delay
-      setTimeout(() => {
-        syncProgress.style.display = 'none';
-        progressBar.style.width = '0%';
-        createSidebar(); // Refresh to show new count
-      }, 2000);
+    if (!response.ok) {
+      throw new Error('Sync failed: ' + response.statusText);
     }
+
+    // Read the streaming response
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop() || '';
+
+      for (const line of lines) {
+        if (line.trim()) {
+          try {
+            const data = JSON.parse(line);
+            console.log('Sync update:', data);
+            
+            switch (data.type) {
+              case 'start':
+              case 'status':
+                console.log(data.message);
+                break;
+                
+              case 'progress':
+                emailsSynced = data.progress;
+                totalEmailsToSync = data.total || totalEmailsToSync;
+                createSidebar(); // Update progress UI
+                console.log(`Synced ${emailsSynced} of ${totalEmailsToSync} emails (${data.percentage}%)`);
+                break;
+                
+              case 'complete':
+                emailsSynced = data.total;
+                console.log('Email sync completed!', data.message);
+                break;
+                
+              case 'error':
+                throw new Error(data.error);
+            }
+          } catch (e) {
+            if (line.includes('error')) {
+              console.error('Sync error:', e);
+            }
+          }
+        }
+      }
+    }
+
+    // Sync complete
+    isSyncing = false;
+    
+    // Store sync state
+    chrome.storage.local.set({
+      emailsSynced: emailsSynced,
+      lastSyncTime: new Date().toISOString()
+    });
+    
+    createSidebar(); // Show final UI
+    
   } catch (error) {
     console.error('Sync error:', error);
-    syncStatus.textContent = '❌ Sync failed';
+    isSyncing = false;
+    emailsSynced = 0;
+    createSidebar();
+    alert('Failed to sync emails. Please try again.');
   }
 }
 
-// Handle search
 async function handleSearch() {
   const searchInput = document.getElementById('search-input');
-  const query = searchInput.value.trim();
+  if (!searchInput) return;
   
-  if (!query || isSearching) return;
+  const query = searchInput.value.trim();
+  if (!query) return;
 
-  isSearching = true;
   const resultsDiv = document.getElementById('search-results');
-  resultsDiv.innerHTML = '<p style="text-align: center; color: #6b7280;">Searching...</p>';
+  if (!resultsDiv) return;
+
+  resultsDiv.innerHTML = `
+    <div style="
+      text-align: center;
+      color: #666666;
+      font-size: 14px;
+      margin-top: 40px;
+    ">
+      Searching emails...
+    </div>
+  `;
 
   try {
     const response = await fetch('http://localhost:3000/api/test-pinecone', {
@@ -641,182 +835,241 @@ async function handleSearch() {
       body: JSON.stringify({
         action: 'search_emails',
         query: query,
+        namespace: userEmail, // IMPORTANT: Only search in current user's namespace
+        filter: {
+          userEmail: userEmail // Additional filter to ensure we only get current user's emails
+        }
       }),
     });
 
     const data = await response.json();
     
-    if (data.success && data.results.length > 0) {
-      displayResults(data.results);
+    if (data.success && data.results && data.results.length > 0) {
+      displaySearchResults(data.results);
     } else {
-      resultsDiv.innerHTML = '<p style="text-align: center; color: #6b7280; font-size: 14px;">No emails found</p>';
+      resultsDiv.innerHTML = `
+        <div style="
+          text-align: center;
+          color: #999999;
+          font-size: 14px;
+          margin-top: 40px;
+        ">
+          No emails found for "${query}"
+        </div>
+      `;
     }
   } catch (error) {
     console.error('Search error:', error);
-    resultsDiv.innerHTML = '<p style="text-align: center; color: #dc3545; font-size: 14px;">Search failed</p>';
-  } finally {
-    isSearching = false;
+    resultsDiv.innerHTML = `
+      <div style="
+        text-align: center;
+        color: #dc3545;
+        font-size: 14px;
+        margin-top: 40px;
+      ">
+        Search failed. Please try again.
+      </div>
+    `;
   }
 }
 
-// Display search results
-function displayResults(results) {
+function displaySearchResults(results) {
   const resultsDiv = document.getElementById('search-results');
-  
-  resultsDiv.innerHTML = results.map(result => `
-    <div style="
-      background: #f9fafb;
-      border: 1px solid #e5e7eb;
-      border-radius: 8px;
-      padding: 12px;
-      margin-bottom: 8px;
-      cursor: pointer;
-      transition: all 0.2s;
-    " onmouseover="this.style.borderColor='#d1d5db'; this.style.background='#f3f4f6'" 
-       onmouseout="this.style.borderColor='#e5e7eb'; this.style.background='#f9fafb'">
-      <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 4px;">
-        <h4 style="margin: 0; font-size: 14px; font-weight: 600; color: #1f2937; flex: 1;">
-          ${result.metadata.subject || 'No subject'}
-        </h4>
-        <span style="font-size: 11px; color: #9ca3af;">
-          ${Math.round(result.score * 100)}%
-        </span>
-      </div>
-      <p style="margin: 0 0 4px 0; font-size: 13px; color: #4b5563;">
-        ${result.metadata.fromName || result.metadata.from}
-      </p>
-      ${result.metadata.snippet ? `
-        <p style="margin: 0; font-size: 12px; color: #6b7280; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;">
-          ${result.metadata.snippet}
-        </p>
-      ` : ''}
-      <div style="margin-top: 6px; font-size: 11px; color: #9ca3af;">
-        ${new Date(result.metadata.date).toLocaleDateString()}
-      </div>
-    </div>
-  `).join('');
-}
+  if (!resultsDiv) return;
 
-// Check sync status
-async function checkSyncStatus() {
-  try {
-    const response = await fetch('http://localhost:3000/api/test-pinecone');
-    const data = await response.json();
-    
-    if (data.success && data.indexStats) {
-      totalEmailsSynced = data.indexStats.totalRecordCount || 0;
-    }
-  } catch (error) {
-    console.error('Failed to check sync status:', error);
-  }
-}
+  resultsDiv.innerHTML = results.map((result, index) => {
+    const similarity = Math.round((result.score || 0) * 100);
+    const subject = result.metadata?.subject || 'No subject';
+    const from = result.metadata?.fromName || result.metadata?.from || 'Unknown sender';
+    const snippet = result.metadata?.snippet || '';
+    const date = result.metadata?.date ? new Date(result.metadata.date).toLocaleDateString() : '';
 
-// Check stored auth state
-async function checkAuthState() {
-  chrome.storage.local.get(['isAuthenticated', 'userEmail', 'accessToken', 'totalEmailsSynced', 'lastSyncTime'], async (result) => {
-    if (result.isAuthenticated) {
-      isAuthenticated = true;
-      userEmail = result.userEmail;
-      accessToken = result.accessToken;
-      totalEmailsSynced = result.totalEmailsSynced || 0;
-      lastSyncTime = result.lastSyncTime;
-      
-      await checkSyncStatus();
-      createSidebar();
-    }
+    return `
+      <div class="search-result-item" data-index="${index}" style="
+        background: #ffffff;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        padding: 16px;
+        margin-bottom: 12px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+      ">
+        
+        <div style="
+          display: flex;
+          justify-content: space-between;
+          align-items: start;
+          margin-bottom: 8px;
+        ">
+          <div style="
+            font-size: 14px;
+            font-weight: 600;
+            color: #000000;
+            flex: 1;
+            margin-right: 12px;
+            line-height: 1.4;
+          ">
+            ${subject}
+          </div>
+          <div style="
+            font-size: 12px;
+            color: #666666;
+            background: #f0f0f0;
+            padding: 2px 8px;
+            border-radius: 12px;
+            white-space: nowrap;
+          ">
+            ${similarity}% match
+          </div>
+        </div>
+        
+        <div style="
+          font-size: 13px;
+          color: #666666;
+          margin-bottom: 8px;
+        ">
+          ${from}
+        </div>
+        
+        ${snippet ? `
+          <div style="
+            font-size: 12px;
+            color: #999999;
+            line-height: 1.4;
+            margin-bottom: 8px;
+            overflow: hidden;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+          ">
+            ${snippet}
+          </div>
+        ` : ''}
+        
+        <div style="
+          font-size: 11px;
+          color: #cccccc;
+        ">
+          ${date}
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  // Add hover events to search result items
+  const searchResultItems = resultsDiv.querySelectorAll('.search-result-item');
+  searchResultItems.forEach(item => {
+    item.addEventListener('mouseover', () => {
+      item.style.borderColor = '#000000';
+      item.style.boxShadow = '0 2px 8px rgba(0,0,0,0.1)';
+    });
+    item.addEventListener('mouseout', () => {
+      item.style.borderColor = '#e5e7eb';
+      item.style.boxShadow = 'none';
+    });
   });
 }
 
-// Listen for auth success messages from background script
+// Handle auth success from background script
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.action === 'auth_success') {
-    console.log('✅ Auth success message received:', message);
+    console.log('Auth success received:', message);
     
-    // Update auth state
+    // Check if we're already syncing to avoid duplicate syncs
+    if (isSyncing) {
+      console.log('Already syncing, ignoring duplicate auth_success');
+      sendResponse({ success: true });
+      return;
+    }
+    
     isAuthenticated = true;
     userEmail = message.userEmail;
     accessToken = message.tokens.access_token;
     
-    // Store in Chrome storage
+    // Store auth state
     chrome.storage.local.set({
       isAuthenticated: true,
       userEmail: userEmail,
       accessToken: accessToken,
       tokens: message.tokens
-    }, async () => {
-      // Check sync status
-      await checkSyncStatus();
-      
-      // Refresh UI
-      createSidebar();
     });
+    
+    // Start syncing emails
+    startSync();
     
     sendResponse({ success: true });
   }
 });
 
-// Initialize
+// Load stored auth state
+function loadAuthState() {
+  chrome.storage.local.get(['isAuthenticated', 'userEmail', 'accessToken', 'emailsSynced'], (result) => {
+    if (result.isAuthenticated) {
+      isAuthenticated = true;
+      userEmail = result.userEmail;
+      accessToken = result.accessToken;
+      emailsSynced = result.emailsSynced || 0;
+      createSidebar();
+    }
+  });
+}
+
+// Initialize extension
 function initialize() {
   console.log('🚀 Initializing AI Email Agent...');
+  console.log('Current URL:', window.location.href);
+  console.log('Document ready state:', document.readyState);
   
   if (!window.location.hostname.includes('mail.google.com')) {
     console.log('❌ Not on Gmail, skipping initialization');
     return;
   }
 
-  createToggleButton();
-  createSidebar();
-  checkAuthState();
+  try {
+    console.log('✅ Creating toggle button...');
+    createToggleButton();
+    
+    console.log('✅ Creating sidebar...');
+    createSidebar();
+    
+    console.log('✅ Loading auth state...');
+    loadAuthState();
+    
+    console.log('✅ AI Email Agent initialized successfully');
+  } catch (error) {
+    console.error('❌ Error initializing AI Email Agent:', error);
+  }
 }
 
-// Wait for page to load
+// Wait for page load
 if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', initialize);
+  document.addEventListener('DOMContentLoaded', () => {
+    setTimeout(initialize, 500); // Delay for Gmail to fully load
+  });
 } else {
-  initialize();
+  setTimeout(initialize, 500); // Delay for Gmail to fully load
 }
 
-// Minimal styles
-const style = document.createElement('style');
-style.textContent = `
-  #ai-email-toggle-btn:hover {
-    background: #374151 !important;
-  }
+// Also try initializing when window loads
+window.addEventListener('load', () => {
+  setTimeout(initialize, 1000);
+});
 
-  #email-input:focus,
-  #search-input:focus {
-    outline: none;
-    border-color: #4f46e5 !important;
+// Handle page navigation (Gmail is a SPA)
+let currentUrl = location.href;
+new MutationObserver(() => {
+  if (location.href !== currentUrl) {
+    currentUrl = location.href;
+    console.log('🔄 URL changed, reinitializing...', currentUrl);
+    setTimeout(initialize, 1000); // Reinitialize after navigation
   }
+}).observe(document, { subtree: true, childList: true });
 
-  button:hover:not(:disabled) {
-    opacity: 0.9;
+// Force initialization after a longer delay as fallback
+setTimeout(() => {
+  const existingBtn = document.getElementById('sidebar-toggle');
+  if (!existingBtn) {
+    console.log('🔄 Toggle button not found, forcing initialization...');
+    initialize();
   }
-
-  button:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-  }
-
-  .quick-search:hover {
-    background: #e5e7eb !important;
-  }
-
-  #search-results::-webkit-scrollbar {
-    width: 6px;
-  }
-
-  #search-results::-webkit-scrollbar-track {
-    background: #f1f1f1;
-  }
-
-  #search-results::-webkit-scrollbar-thumb {
-    background: #cbd5e0;
-    border-radius: 3px;
-  }
-
-  #account-menu button:hover {
-    background: #f3f4f6 !important;
-  }
-`;
-document.head.appendChild(style);
+}, 3000);
