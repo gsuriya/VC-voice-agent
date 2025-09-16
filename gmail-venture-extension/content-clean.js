@@ -1,4 +1,4 @@
-// AI Email Agent - Improved UI with Account Management
+// AI Email Agent - Clean Minimalist Design
 console.log('🤖 AI Email Agent loaded');
 
 let sidebarVisible = false;
@@ -7,7 +7,6 @@ let userEmail = '';
 let accessToken = null;
 let totalEmailsSynced = 0;
 let isSearching = false;
-let lastSyncTime = null;
 
 // Create toggle button
 function createToggleButton() {
@@ -95,170 +94,94 @@ function createSidebar() {
               AI Email Agent
             </h2>
             <p style="margin: 0; font-size: 14px; color: #6b7280;">
-              Semantic Search & Smart Sync
+              Smart Gmail Responses
             </p>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- Account Section -->
-    <div style="
+    <!-- Status Bar -->
+    <div id="status-bar" style="
       padding: 16px 20px;
-      background: ${isAuthenticated ? '#f0f9ff' : '#fef3c7'};
-      border-bottom: 1px solid ${isAuthenticated ? '#bae6fd' : '#fcd34d'};
+      background: ${isAuthenticated ? '#d4edda' : '#f8d7da'};
+      border-bottom: 1px solid ${isAuthenticated ? '#c3e6cb' : '#f5c6cb'};
     ">
-      ${!isAuthenticated ? `
-        <!-- Not Authenticated -->
-        <div>
-          <h3 style="margin: 0 0 12px 0; font-size: 15px; color: #92400e;">
-            Connect Gmail Account
-          </h3>
-          <div style="display: flex; gap: 8px;">
-            <input type="email" id="email-input" placeholder="your.email@gmail.com" style="
-              flex: 1;
-              padding: 8px 12px;
-              border: 1px solid #fbbf24;
-              border-radius: 6px;
-              font-size: 14px;
-            "/>
-            <button id="auth-btn" style="
-              padding: 8px 16px;
-              background: #f59e0b;
-              color: white;
-              border: none;
-              border-radius: 6px;
-              font-size: 14px;
-              font-weight: 500;
-              cursor: pointer;
-            ">Connect</button>
-          </div>
+      <div style="display: flex; align-items: center; justify-content: space-between;">
+        <div style="font-size: 14px; color: ${isAuthenticated ? '#155724' : '#721c24'};">
+          ${isAuthenticated ? `✓ Connected: ${userEmail}` : '⚡ Not authenticated'}
         </div>
-      ` : `
-        <!-- Authenticated -->
-        <div>
-          <div style="display: flex; justify-content: space-between; align-items: start;">
-            <div>
-              <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
-                <span style="color: #10b981; font-size: 16px;">✓</span>
-                <span style="font-weight: 600; color: #065f46;">${userEmail}</span>
-              </div>
-              <div style="font-size: 13px; color: #047857;">
-                ${totalEmailsSynced} emails indexed
-                ${lastSyncTime ? ` • Last sync: ${new Date(lastSyncTime).toLocaleTimeString()}` : ''}
-              </div>
-            </div>
-            <button id="account-menu-btn" style="
-              background: white;
-              border: 1px solid #d1fae5;
-              color: #065f46;
-              padding: 4px 12px;
-              border-radius: 6px;
-              font-size: 13px;
-              cursor: pointer;
-            ">⚙️</button>
-          </div>
-          
-          <!-- Account Menu (hidden by default) -->
-          <div id="account-menu" style="
-            display: none;
-            position: absolute;
-            right: 20px;
-            top: 60px;
-            background: white;
-            border: 1px solid #e5e7eb;
-            border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-            z-index: 10;
-          ">
-            <button id="switch-account-btn" style="
-              display: block;
-              width: 100%;
-              padding: 10px 16px;
-              background: none;
-              border: none;
-              text-align: left;
-              cursor: pointer;
-              font-size: 14px;
-              color: #374151;
-              border-bottom: 1px solid #e5e7eb;
-            ">🔄 Switch Account</button>
-            <button id="resync-btn" style="
-              display: block;
-              width: 100%;
-              padding: 10px 16px;
-              background: none;
-              border: none;
-              text-align: left;
-              cursor: pointer;
-              font-size: 14px;
-              color: #374151;
-              border-bottom: 1px solid #e5e7eb;
-            ">🔄 Re-sync Emails</button>
-            <button id="disconnect-btn" style="
-              display: block;
-              width: 100%;
-              padding: 10px 16px;
-              background: none;
-              border: none;
-              text-align: left;
-              cursor: pointer;
-              font-size: 14px;
-              color: #dc2626;
-            ">🚪 Disconnect</button>
-          </div>
-        </div>
-      `}
+        ${isAuthenticated ? `
+          <span style="
+            background: #28a745;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+          ">${totalEmailsSynced} synced</span>
+        ` : ''}
+      </div>
     </div>
 
     <!-- Main Content -->
     <div style="flex: 1; overflow-y: auto;">
-      ${isAuthenticated ? `
-        <!-- Quick Actions -->
-        <div style="padding: 16px 20px; border-bottom: 1px solid #e5e7eb;">
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
-            <button id="sync-new-btn" style="
+      ${!isAuthenticated ? `
+        <!-- Auth Section -->
+        <div style="padding: 20px;">
+          <div style="
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 20px;
+          ">
+            <h3 style="margin: 0 0 16px 0; font-size: 16px; color: #1f2937;">
+              Connect Your Gmail
+            </h3>
+            <input type="email" id="email-input" placeholder="your.email@gmail.com" style="
+              width: 100%;
+              padding: 10px 12px;
+              border: 1px solid #ced4da;
+              border-radius: 4px;
+              font-size: 14px;
+              margin-bottom: 12px;
+              box-sizing: border-box;
+            "/>
+            <button id="auth-btn" style="
+              width: 100%;
               padding: 10px;
-              background: #4f46e5;
+              background: #1f2937;
               color: white;
               border: none;
-              border-radius: 6px;
+              border-radius: 4px;
               font-size: 14px;
               font-weight: 500;
               cursor: pointer;
-              display: flex;
-              align-items: center;
-              justify-content: center;
-              gap: 6px;
-            ">
-              <span>🔄</span>
-              <span>Sync New</span>
-            </button>
-            <button id="sync-all-btn" style="
-              padding: 10px;
-              background: #7c3aed;
-              color: white;
-              border: none;
-              border-radius: 6px;
-              font-size: 14px;
-              font-weight: 500;
-              cursor: pointer;
-              display: flex;
-              align-items: center;
-              justify-content: center;
-              gap: 6px;
-            ">
-              <span>🚀</span>
-              <span>Full Sync</span>
-            </button>
+            ">🔐 Connect Gmail Account</button>
           </div>
+        </div>
+      ` : `
+        <!-- Controls Section -->
+        <div style="padding: 20px; border-bottom: 1px solid #e5e7eb;">
+          <button id="sync-btn" style="
+            width: 100%;
+            padding: 12px;
+            background: #4f46e5;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            margin-bottom: 12px;
+          ">🚀 Sync Gmail to Vector DB</button>
           
-          <div id="sync-progress" style="display: none; margin-top: 12px;">
+          <div id="sync-progress" style="display: none;">
             <div style="
               background: #e5e7eb;
               height: 4px;
               border-radius: 2px;
               overflow: hidden;
+              margin-bottom: 8px;
             ">
               <div id="progress-bar" style="
                 background: #4f46e5;
@@ -268,7 +191,7 @@ function createSidebar() {
               "></div>
             </div>
             <p id="sync-status" style="
-              margin: 8px 0 0 0;
+              margin: 0;
               font-size: 12px;
               color: #6b7280;
               text-align: center;
@@ -286,11 +209,10 @@ function createSidebar() {
             <input type="text" id="search-input" placeholder="Search emails naturally..." style="
               width: 100%;
               padding: 10px 40px 10px 12px;
-              border: 1px solid #d1d5db;
-              border-radius: 8px;
+              border: 1px solid #ced4da;
+              border-radius: 4px;
               font-size: 14px;
               box-sizing: border-box;
-              transition: all 0.2s;
             "/>
             <button id="search-btn" style="
               position: absolute;
@@ -306,76 +228,49 @@ function createSidebar() {
           </div>
 
           <!-- Quick Searches -->
-          <div style="display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 16px;">
+          <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px;">
             <button class="quick-search" data-query="recent emails" style="
-              padding: 5px 12px;
-              background: #f3f4f6;
-              border: 1px solid #e5e7eb;
+              padding: 6px 12px;
+              background: #f8f9fa;
+              border: 1px solid #dee2e6;
               border-radius: 16px;
               font-size: 12px;
               cursor: pointer;
-              transition: all 0.2s;
             ">Recent</button>
             <button class="quick-search" data-query="important emails" style="
-              padding: 5px 12px;
-              background: #f3f4f6;
-              border: 1px solid #e5e7eb;
+              padding: 6px 12px;
+              background: #f8f9fa;
+              border: 1px solid #dee2e6;
               border-radius: 16px;
               font-size: 12px;
               cursor: pointer;
-              transition: all 0.2s;
             ">Important</button>
             <button class="quick-search" data-query="unread emails" style="
-              padding: 5px 12px;
-              background: #f3f4f6;
-              border: 1px solid #e5e7eb;
+              padding: 6px 12px;
+              background: #f8f9fa;
+              border: 1px solid #dee2e6;
               border-radius: 16px;
               font-size: 12px;
               cursor: pointer;
-              transition: all 0.2s;
             ">Unread</button>
             <button class="quick-search" data-query="emails from today" style="
-              padding: 5px 12px;
-              background: #f3f4f6;
-              border: 1px solid #e5e7eb;
+              padding: 6px 12px;
+              background: #f8f9fa;
+              border: 1px solid #dee2e6;
               border-radius: 16px;
               font-size: 12px;
               cursor: pointer;
-              transition: all 0.2s;
             ">Today</button>
-            <button class="quick-search" data-query="job applications" style="
-              padding: 5px 12px;
-              background: #f3f4f6;
-              border: 1px solid #e5e7eb;
-              border-radius: 16px;
-              font-size: 12px;
-              cursor: pointer;
-              transition: all 0.2s;
-            ">Jobs</button>
           </div>
 
           <!-- Search Results -->
           <div id="search-results" style="
-            max-height: calc(100vh - 450px);
+            max-height: calc(100vh - 400px);
             overflow-y: auto;
           ">
-            <p style="text-align: center; color: #9ca3af; font-size: 14px;">
-              Search your ${totalEmailsSynced} indexed emails...
+            <p style="text-align: center; color: #6b7280; font-size: 14px;">
+              Search results will appear here...
             </p>
-          </div>
-        </div>
-      ` : `
-        <!-- Not Authenticated State -->
-        <div style="
-          flex: 1;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          padding: 40px;
-        ">
-          <div style="text-align: center;">
-            <div style="font-size: 48px; margin-bottom: 16px;">🔒</div>
-            <p style="color: #6b7280; font-size: 16px;">Connect your Gmail to start</p>
           </div>
         </div>
       `}
@@ -384,13 +279,22 @@ function createSidebar() {
     <!-- Footer -->
     <div style="
       padding: 12px 20px;
-      background: #f9fafb;
+      background: #f8f9fa;
       border-top: 1px solid #e5e7eb;
       font-size: 12px;
-      color: #9ca3af;
+      color: #6b7280;
       text-align: center;
     ">
-      Secure • Private • AI-Powered
+      ${isAuthenticated ? `
+        <button id="disconnect-btn" style="
+          background: none;
+          border: none;
+          color: #dc3545;
+          cursor: pointer;
+          font-size: 12px;
+          text-decoration: underline;
+        ">Disconnect</button>
+      ` : 'Secure & Private'}
     </div>
   `;
   
@@ -421,45 +325,16 @@ function setupEventListeners() {
     authBtn.addEventListener('click', handleAuth);
   }
 
-  // Account menu button
-  const accountMenuBtn = document.getElementById('account-menu-btn');
-  if (accountMenuBtn) {
-    accountMenuBtn.addEventListener('click', () => {
-      const menu = document.getElementById('account-menu');
-      menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
-    });
-  }
-
-  // Switch account button
-  const switchAccountBtn = document.getElementById('switch-account-btn');
-  if (switchAccountBtn) {
-    switchAccountBtn.addEventListener('click', handleSwitchAccount);
-  }
-
-  // Resync button
-  const resyncBtn = document.getElementById('resync-btn');
-  if (resyncBtn) {
-    resyncBtn.addEventListener('click', () => {
-      document.getElementById('account-menu').style.display = 'none';
-      handleSync(false); // Sync new emails only
-    });
-  }
-
   // Disconnect button
   const disconnectBtn = document.getElementById('disconnect-btn');
   if (disconnectBtn) {
     disconnectBtn.addEventListener('click', handleDisconnect);
   }
 
-  // Sync buttons
-  const syncNewBtn = document.getElementById('sync-new-btn');
-  if (syncNewBtn) {
-    syncNewBtn.addEventListener('click', () => handleSync(false));
-  }
-
-  const syncAllBtn = document.getElementById('sync-all-btn');
-  if (syncAllBtn) {
-    syncAllBtn.addEventListener('click', () => handleSync(true));
+  // Sync button
+  const syncBtn = document.getElementById('sync-btn');
+  if (syncBtn) {
+    syncBtn.addEventListener('click', handleSync);
   }
 
   // Search functionality
@@ -487,15 +362,6 @@ function setupEventListeners() {
       handleSearch();
     });
   });
-
-  // Click outside to close account menu
-  document.addEventListener('click', (e) => {
-    const menu = document.getElementById('account-menu');
-    const menuBtn = document.getElementById('account-menu-btn');
-    if (menu && !menu.contains(e.target) && e.target !== menuBtn) {
-      menu.style.display = 'none';
-    }
-  });
 }
 
 // Handle authentication
@@ -509,62 +375,66 @@ async function handleAuth() {
   }
 
   const authBtn = document.getElementById('auth-btn');
-  authBtn.textContent = '⏳';
+  authBtn.textContent = '🔄 Connecting...';
   authBtn.disabled = true;
 
   try {
-    // Send message to background script to open auth window
-    chrome.runtime.sendMessage({
-      action: 'open_auth_window',
-      userEmail: email
-    }, (response) => {
-      if (response && response.success) {
-        // Auth window opened successfully
-        // Now we wait for the auth_success message from background script
-        authBtn.textContent = '⏳ Waiting for auth...';
-      } else {
-        alert('Failed to open authentication window. Please try again.');
-        authBtn.textContent = 'Connect';
-        authBtn.disabled = false;
-      }
+    const response = await fetch('http://localhost:3000/api/demo-auth', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ userEmail: email }),
     });
+
+    const data = await response.json();
+    
+    if (data.success) {
+      isAuthenticated = true;
+      userEmail = email;
+      accessToken = data.tokens.access_token;
+      
+      // Store in Chrome storage
+      chrome.storage.local.set({
+        isAuthenticated: true,
+        userEmail: email,
+        accessToken: accessToken,
+      });
+
+      // Check sync status
+      await checkSyncStatus();
+      
+      // Refresh UI
+      createSidebar();
+    }
   } catch (error) {
     console.error('Auth error:', error);
     alert('Authentication failed. Please try again.');
-    authBtn.textContent = 'Connect';
+  } finally {
+    authBtn.textContent = '🔐 Connect Gmail Account';
     authBtn.disabled = false;
   }
 }
 
-// Handle switch account
-function handleSwitchAccount() {
-  // Clear current auth
+// Handle disconnect
+function handleDisconnect() {
   isAuthenticated = false;
   userEmail = '';
   accessToken = null;
   totalEmailsSynced = 0;
-  lastSyncTime = null;
   
   chrome.storage.local.clear();
-  
-  // Close menu and refresh UI
-  document.getElementById('account-menu').style.display = 'none';
   createSidebar();
 }
 
-// Handle disconnect
-function handleDisconnect() {
-  if (confirm('Are you sure you want to disconnect? Your synced emails will remain in the database.')) {
-    handleSwitchAccount();
-  }
-}
-
 // Handle sync
-async function handleSync(fullSync = false) {
+async function handleSync() {
+  const syncBtn = document.getElementById('sync-btn');
   const syncProgress = document.getElementById('sync-progress');
   const progressBar = document.getElementById('progress-bar');
   const syncStatus = document.getElementById('sync-status');
   
+  syncBtn.style.display = 'none';
   syncProgress.style.display = 'block';
   
   try {
@@ -574,7 +444,7 @@ async function handleSync(fullSync = false) {
       progress += 10;
       if (progress <= 90) {
         progressBar.style.width = progress + '%';
-        syncStatus.textContent = fullSync ? `Full sync... ${progress}%` : `Syncing new emails... ${progress}%`;
+        syncStatus.textContent = `Syncing... ${progress}%`;
       }
     }, 500);
 
@@ -587,8 +457,7 @@ async function handleSync(fullSync = false) {
       body: JSON.stringify({
         tokens: { access_token: accessToken },
         userEmail: userEmail,
-        maxResults: fullSync ? 200 : 50,
-        syncType: fullSync ? 'full' : 'incremental',
+        maxResults: 50,
       }),
     });
 
@@ -598,22 +467,13 @@ async function handleSync(fullSync = false) {
     
     if (data.success) {
       progressBar.style.width = '100%';
-      syncStatus.textContent = `✅ Synced ${data.totalEmails} emails!`;
-      totalEmailsSynced += data.totalEmails;
-      lastSyncTime = new Date().toISOString();
+      syncStatus.textContent = '✅ Sync complete!';
+      totalEmailsSynced = data.totalEmails;
       
-      // Store updated count
-      chrome.storage.local.set({
-        totalEmailsSynced: totalEmailsSynced,
-        lastSyncTime: lastSyncTime,
-      });
-      
-      // Hide progress after delay
+      // Refresh UI after delay
       setTimeout(() => {
-        syncProgress.style.display = 'none';
-        progressBar.style.width = '0%';
-        createSidebar(); // Refresh to show new count
-      }, 2000);
+        createSidebar();
+      }, 1500);
     }
   } catch (error) {
     console.error('Sync error:', error);
@@ -665,20 +525,18 @@ function displayResults(results) {
   
   resultsDiv.innerHTML = results.map(result => `
     <div style="
-      background: #f9fafb;
+      background: #f8f9fa;
       border: 1px solid #e5e7eb;
-      border-radius: 8px;
+      border-radius: 6px;
       padding: 12px;
       margin-bottom: 8px;
       cursor: pointer;
-      transition: all 0.2s;
-    " onmouseover="this.style.borderColor='#d1d5db'; this.style.background='#f3f4f6'" 
-       onmouseout="this.style.borderColor='#e5e7eb'; this.style.background='#f9fafb'">
+    " onmouseover="this.style.background='#f1f3f4'" onmouseout="this.style.background='#f8f9fa'">
       <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 4px;">
         <h4 style="margin: 0; font-size: 14px; font-weight: 600; color: #1f2937; flex: 1;">
           ${result.metadata.subject || 'No subject'}
         </h4>
-        <span style="font-size: 11px; color: #9ca3af;">
+        <span style="font-size: 11px; color: #6b7280;">
           ${Math.round(result.score * 100)}%
         </span>
       </div>
@@ -690,9 +548,6 @@ function displayResults(results) {
           ${result.metadata.snippet}
         </p>
       ` : ''}
-      <div style="margin-top: 6px; font-size: 11px; color: #9ca3af;">
-        ${new Date(result.metadata.date).toLocaleDateString()}
-      </div>
     </div>
   `).join('');
 }
@@ -713,47 +568,17 @@ async function checkSyncStatus() {
 
 // Check stored auth state
 async function checkAuthState() {
-  chrome.storage.local.get(['isAuthenticated', 'userEmail', 'accessToken', 'totalEmailsSynced', 'lastSyncTime'], async (result) => {
+  chrome.storage.local.get(['isAuthenticated', 'userEmail', 'accessToken'], async (result) => {
     if (result.isAuthenticated) {
       isAuthenticated = true;
       userEmail = result.userEmail;
       accessToken = result.accessToken;
-      totalEmailsSynced = result.totalEmailsSynced || 0;
-      lastSyncTime = result.lastSyncTime;
       
       await checkSyncStatus();
       createSidebar();
     }
   });
 }
-
-// Listen for auth success messages from background script
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  if (message.action === 'auth_success') {
-    console.log('✅ Auth success message received:', message);
-    
-    // Update auth state
-    isAuthenticated = true;
-    userEmail = message.userEmail;
-    accessToken = message.tokens.access_token;
-    
-    // Store in Chrome storage
-    chrome.storage.local.set({
-      isAuthenticated: true,
-      userEmail: userEmail,
-      accessToken: accessToken,
-      tokens: message.tokens
-    }, async () => {
-      // Check sync status
-      await checkSyncStatus();
-      
-      // Refresh UI
-      createSidebar();
-    });
-    
-    sendResponse({ success: true });
-  }
-});
 
 // Initialize
 function initialize() {
@@ -813,10 +638,6 @@ style.textContent = `
   #search-results::-webkit-scrollbar-thumb {
     background: #cbd5e0;
     border-radius: 3px;
-  }
-
-  #account-menu button:hover {
-    background: #f3f4f6 !important;
   }
 `;
 document.head.appendChild(style);

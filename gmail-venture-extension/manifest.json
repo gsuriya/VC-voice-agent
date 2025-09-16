@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "AI Email Agent for Gmail",
-  "version": "2.0",
+  "version": "8.0",
   "description": "AI-powered email responses directly in Gmail",
   "permissions": [
     "storage",
@@ -15,15 +15,6 @@
     "https://www.googleapis.com/*",
     "http://localhost:3000/*"
   ],
-  "oauth2": {
-    "client_id": "21320492527-0p1b09mgjkf3a99i5agisuat6n42nl4f.apps.googleusercontent.com",
-    "scopes": [
-      "https://www.googleapis.com/auth/gmail.readonly",
-      "https://www.googleapis.com/auth/gmail.send",
-      "https://www.googleapis.com/auth/gmail.modify",
-      "https://www.googleapis.com/auth/userinfo.email"
-    ]
-  },
   "background": {
     "service_worker": "background.js"
   },

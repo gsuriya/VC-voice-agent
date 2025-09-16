@@ -1,5 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { GoogleAPIService } from '@/lib/google-apis';
+import { 
+  storeEmail, 
+  bulkStoreEmails, 
+  processSmartQuery, 
+  getUserEmails, 
+  getUnreadEmails 
+} from '@/lib/email-service';
 import OpenAI from 'openai';
 
 const openai = new OpenAI({
@@ -23,8 +30,43 @@ export async function POST(request: NextRequest) {
 
     switch (action) {
       case 'get_emails':
-        const emails = await googleAPI.getUnreadEmails(10);
+        // Get from database first, fallback to Gmail API
+        const userEmail = body.userEmail;
+        if (!userEmail) {
+          return NextResponse.json(
+            { error: 'userEmail is required' },
+            { status: 400 }
+          );
+        }
+        
+        let emails = await getUnreadEmails(userEmail, 10);
+        
+        // If no emails in DB or requesting fresh data, fetch from Gmail
+        if (emails.length === 0 || body.forceRefresh) {
+          const gmailEmails = await googleAPI.getUnreadEmails(10);
+          // Store in database
+          await bulkStoreEmails(gmailEmails, userEmail);
+          emails = await getUnreadEmails(userEmail, 10);
+        }
+        
         return NextResponse.json({ emails });
+
+      case 'sync_all_emails':
+        // Sync all emails to database
+        const maxResults = body.maxResults || 100;
+        const allEmails = await googleAPI.getAllEmails('', maxResults);
+        const storedEmails = await bulkStoreEmails(allEmails, body.userEmail);
+        
+        return NextResponse.json({
+          success: true,
+          totalEmails: storedEmails.length,
+          message: `Synced ${storedEmails.length} emails to database`,
+        });
+
+      case 'process_ai_query':
+        // Process natural language query
+        const queryResult = await processSmartQuery(body.query, body.userEmail);
+        return NextResponse.json(queryResult);
 
       case 'send_email':
         if (!to || !subject || !emailBody) {

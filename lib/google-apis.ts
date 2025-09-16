@@ -144,6 +144,142 @@ export class GoogleAPIService {
     }
   }
 
+  // Get ALL emails with pagination (for syncing to vector database)
+  async getAllEmails(query: string = '', maxResults: number = 1000) {
+    try {
+      console.log(`🚀 Starting bulk email sync... Target: ${maxResults} emails`);
+      
+      const allEmails = [];
+      let pageToken = '';
+      let totalFetched = 0;
+      let pageCount = 0;
+
+      while (totalFetched < maxResults) {
+        const batchSize = Math.min(500, maxResults - totalFetched); // Gmail API max is 500
+        pageCount++;
+        
+        console.log(`📦 Fetching batch ${pageCount} (${batchSize} emails)...`);
+        
+        const listParams: any = {
+          userId: 'me',
+          maxResults: batchSize,
+        };
+        
+        if (query) {
+          listParams.q = query;
+        }
+        
+        if (pageToken) {
+          listParams.pageToken = pageToken;
+        }
+
+        const response = await this.gmail.users.messages.list(listParams);
+
+        if (!response.data.messages || response.data.messages.length === 0) {
+          console.log('✅ No more emails to fetch');
+          break;
+        }
+
+        console.log(`📧 Processing ${response.data.messages.length} email metadata...`);
+
+        // Fetch detailed email data in batches to avoid rate limits
+        const batchDetails = [];
+        for (let i = 0; i < response.data.messages.length; i += 10) {
+          const batch = response.data.messages.slice(i, i + 10);
+          
+          const batchPromises = batch.map(async (message) => {
+            try {
+              const emailData = await this.gmail.users.messages.get({
+                userId: 'me',
+                id: message.id,
+                format: 'full' // Get full email content
+              });
+
+              return this.parseDetailedEmailData(emailData.data);
+            } catch (error) {
+              console.error(`❌ Error fetching email ${message.id}:`, error);
+              return null;
+            }
+          });
+
+          const batchResults = await Promise.all(batchPromises);
+          batchDetails.push(...batchResults.filter(email => email !== null));
+          
+          // Small delay to respect rate limits
+          if (i + 10 < response.data.messages.length) {
+            await new Promise(resolve => setTimeout(resolve, 100));
+          }
+        }
+
+        allEmails.push(...batchDetails);
+        totalFetched += batchDetails.length;
+        
+        console.log(`✅ Batch ${pageCount} complete. Total emails: ${totalFetched}/${maxResults}`);
+
+        // Check if there are more pages
+        pageToken = response.data.nextPageToken;
+        if (!pageToken) {
+          console.log('✅ Reached end of email list');
+          break;
+        }
+
+        // Delay between pages to be nice to Gmail API
+        await new Promise(resolve => setTimeout(resolve, 200));
+      }
+
+      console.log(`🎉 Email sync complete! Fetched ${allEmails.length} emails total`);
+      return allEmails;
+
+    } catch (error) {
+      console.error('❌ Error in getAllEmails:', error);
+      throw error;
+    }
+  }
+
+  // Parse detailed email data
+  private parseDetailedEmailData(emailData: any) {
+    const headers = emailData.payload.headers || [];
+    const getHeader = (name: string) => headers.find((h: any) => h.name.toLowerCase() === name.toLowerCase())?.value || '';
+
+    // Extract email body
+    let body = '';
+    let htmlBody = '';
+    
+    if (emailData.payload.body?.data) {
+      body = Buffer.from(emailData.payload.body.data, 'base64').toString('utf-8');
+    } else if (emailData.payload.parts) {
+      // Multi-part email
+      for (const part of emailData.payload.parts) {
+        if (part.mimeType === 'text/plain' && part.body?.data) {
+          body = Buffer.from(part.body.data, 'base64').toString('utf-8');
+        } else if (part.mimeType === 'text/html' && part.body?.data) {
+          htmlBody = Buffer.from(part.body.data, 'base64').toString('utf-8');
+        }
+      }
+    }
+
+    return {
+      id: emailData.id,
+      threadId: emailData.threadId,
+      historyId: emailData.historyId,
+      from: getHeader('From'),
+      to: getHeader('To'),
+      cc: getHeader('Cc'),
+      bcc: getHeader('Bcc'),
+      subject: getHeader('Subject'),
+      snippet: emailData.snippet || '',
+      body: body.substring(0, 10000), // Limit body size
+      htmlBody: htmlBody.substring(0, 10000),
+      date: getHeader('Date'),
+      internalDate: emailData.internalDate,
+      labelIds: emailData.labelIds || [],
+      // Additional metadata
+      messageId: getHeader('Message-ID'),
+      references: getHeader('References'),
+      inReplyTo: getHeader('In-Reply-To'),
+    };
+  }
+
   // Send email
   async sendEmail(to: string, subject: string, body: string) {
     try {

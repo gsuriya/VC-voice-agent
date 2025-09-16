@@ -517,16 +517,30 @@ async function handleAuth() {
     chrome.runtime.sendMessage({
       action: 'open_auth_window',
       userEmail: email
-    }, (response) => {
+    }, async (response) => {
       if (response && response.success) {
-        // Auth window opened successfully
-        // Now we wait for the auth_success message from background script
-        authBtn.textContent = '⏳ Waiting for auth...';
+        isAuthenticated = true;
+        userEmail = email;
+        accessToken = response.accessToken;
+        
+        // Store in Chrome storage
+        chrome.storage.local.set({
+          isAuthenticated: true,
+          userEmail: email,
+          accessToken: accessToken,
+        });
+
+        // Check sync status
+        await checkSyncStatus();
+        
+        // Refresh UI
+        createSidebar();
       } else {
-        alert('Failed to open authentication window. Please try again.');
-        authBtn.textContent = 'Connect';
-        authBtn.disabled = false;
+        alert('Authentication failed. Please try again.');
       }
+      
+      authBtn.textContent = 'Connect';
+      authBtn.disabled = false;
     });
   } catch (error) {
     console.error('Auth error:', error);
@@ -726,34 +740,6 @@ async function checkAuthState() {
     }
   });
 }
-
-// Listen for auth success messages from background script
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  if (message.action === 'auth_success') {
-    console.log('✅ Auth success message received:', message);
-    
-    // Update auth state
-    isAuthenticated = true;
-    userEmail = message.userEmail;
-    accessToken = message.tokens.access_token;
-    
-    // Store in Chrome storage
-    chrome.storage.local.set({
-      isAuthenticated: true,
-      userEmail: userEmail,
-      accessToken: accessToken,
-      tokens: message.tokens
-    }, async () => {
-      // Check sync status
-      await checkSyncStatus();
-      
-      // Refresh UI
-      createSidebar();
-    });
-    
-    sendResponse({ success: true });
-  }
-});
 
 // Initialize
 function initialize() {
