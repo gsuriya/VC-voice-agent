@@ -18,6 +18,7 @@ let syncProgress = 0;
 let totalEmailsToSync = 1000;
 let emailsSynced = 0;
 let isSyncing = false;
+let isSearching = false;
 let searchResults = [];
 
 // Create and manage sidebar
@@ -325,42 +326,61 @@ function generateSidebarContent() {
         margin-bottom: 16px;
         color: #000000;
       ">
-        Vector Search
+        AI Assistant
       </div>
       
-      <div style="position: relative; margin-bottom: 16px;">
-        <input type="text" id="search-input" placeholder="Search emails semantically..." style="
-          width: 100%;
-          padding: 12px 16px;
-          border: 1px solid #d1d5db;
-          border-radius: 8px;
-          font-size: 14px;
-          background: #ffffff;
-          box-sizing: border-box;
-        " />
-        <button id="search-btn" style="
-          position: absolute;
-          right: 8px;
-          top: 50%;
-          transform: translateY(-50%);
-          width: 32px;
-          height: 32px;
-          background: #000000;
-          border: none;
-          border-radius: 6px;
-          color: #ffffff;
-          cursor: pointer;
-          font-size: 14px;
-        ">→</button>
+      <div id="chat-messages" style="
+        height: 300px;
+        overflow-y: auto;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        padding: 16px;
+        margin-bottom: 16px;
+        background: #f9fafb;
+        font-size: 11px;
+        line-height: 1.4;
+      ">
       </div>
       
+      <div style="display: flex; gap: 8px; margin-bottom: 16px;">
+        <input 
+          type="text" 
+          id="chat-input" 
+          placeholder="Ask me anything about your emails..."
+          style="
+            flex: 1;
+            padding: 12px 16px;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            font-size: 14px;
+            background: #ffffff;
+            box-sizing: border-box;
+          "
+        />
+        <button 
+          id="chat-send" 
+          style="
+            padding: 12px 20px;
+            background: #000000;
+            color: #ffffff;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+          "
+        >
+          Send
+        </button>
+      </div>
+
       <div style="
         display: grid;
         grid-template-columns: 1fr 1fr;
         gap: 8px;
         margin-bottom: 16px;
       ">
-        <button class="quick-search" data-query="recent important emails" style="
+        <button class="quick-chat" data-query="Find my latest unread emails" style="
           padding: 8px 12px;
           background: #f8f9fa;
           border: 1px solid #e5e7eb;
@@ -369,9 +389,9 @@ function generateSidebarContent() {
           cursor: pointer;
           color: #374151;
         ">
-          Recent
+          Latest Unread
         </button>
-        <button class="quick-search" data-query="unread emails" style="
+        <button class="quick-chat" data-query="Show me today's important emails" style="
           padding: 8px 12px;
           background: #f8f9fa;
           border: 1px solid #e5e7eb;
@@ -380,9 +400,9 @@ function generateSidebarContent() {
           cursor: pointer;
           color: #374151;
         ">
-          Unread
+          Today's Important
         </button>
-        <button class="quick-search" data-query="meeting invitations" style="
+        <button class="quick-chat" data-query="Find meeting invitations" style="
           padding: 8px 12px;
           background: #f8f9fa;
           border: 1px solid #e5e7eb;
@@ -391,9 +411,9 @@ function generateSidebarContent() {
           cursor: pointer;
           color: #374151;
         ">
-          Meetings
+          Meeting Invites
         </button>
-        <button class="quick-search" data-query="urgent important" style="
+        <button class="quick-chat" data-query="Draft a new email" style="
           padding: 8px 12px;
           background: #f8f9fa;
           border: 1px solid #e5e7eb;
@@ -402,7 +422,7 @@ function generateSidebarContent() {
           cursor: pointer;
           color: #374151;
         ">
-          Urgent
+          Draft Email
         </button>
       </div>
       
@@ -411,7 +431,7 @@ function generateSidebarContent() {
         color: #666666;
         text-align: center;
       ">
-        ${emailsSynced} emails indexed
+        ${emailsSynced} emails indexed • AI-powered
       </div>
     </div>
 
@@ -429,6 +449,7 @@ function generateSidebarContent() {
         Enter a search query to find relevant emails
       </div>
     </div>
+
 
     <div style="
       padding: 16px 24px;
@@ -600,15 +621,15 @@ function setupEventListeners() {
     searchBtn.addEventListener('click', handleSearch);
   }
 
-  // Quick search buttons
-  const quickSearchBtns = document.querySelectorAll('.quick-search');
-  quickSearchBtns.forEach(btn => {
+  // Quick chat buttons
+  const quickChatBtns = document.querySelectorAll('.quick-chat');
+  quickChatBtns.forEach(btn => {
     btn.addEventListener('click', (e) => {
       const query = e.target.getAttribute('data-query');
-      const searchInput = document.getElementById('search-input');
-      if (searchInput) {
-        searchInput.value = query;
-        handleSearch();
+      const chatInput = document.getElementById('chat-input');
+      if (chatInput) {
+        chatInput.value = query;
+        handleChatSend();
       }
     });
     
@@ -620,7 +641,31 @@ function setupEventListeners() {
       btn.style.background = '#f8f9fa';
     });
   });
+
+  // Chat functionality
+  const chatInput = document.getElementById('chat-input');
+  const chatSend = document.getElementById('chat-send');
   
+  if (chatInput && chatSend) {
+    // Send button click
+    chatSend.addEventListener('click', handleChatSend);
+    
+    // Enter key in input
+    chatInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        handleChatSend();
+      }
+    });
+    
+    // Button hover effects
+    chatSend.addEventListener('mouseover', () => {
+      chatSend.style.background = '#333333';
+    });
+    chatSend.addEventListener('mouseout', () => {
+      chatSend.style.background = '#000000';
+    });
+  }
 }
 
 async function handleGoogleAuth() {
@@ -802,6 +847,139 @@ async function startSync() {
     emailsSynced = 0;
     createSidebar();
     alert('Failed to sync emails. Please try again.');
+  }
+}
+
+async function handleChatSend() {
+  const chatInput = document.getElementById('chat-input');
+  const chatMessages = document.getElementById('chat-messages');
+  
+  if (!chatInput || !chatMessages) return;
+  
+  const message = chatInput.value.trim();
+  if (!message || isSearching) return;
+
+  // Add user message to chat
+  addChatMessage('user', message);
+  chatInput.value = '';
+  
+  // Show thinking state
+  addChatMessage('assistant', 'Let me help you with that...', 'thinking');
+  
+  isSearching = true;
+
+  try {
+    // Use enhanced email agent
+    const response = await fetch('http://localhost:3000/api/enhanced-email-agent', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        query: message,
+        tokens: { access_token: accessToken },
+        userEmail: userEmail
+      }),
+    });
+
+    const data = await response.json();
+
+    // Remove thinking message
+    removeChatMessage('thinking');
+
+    if (data.success) {
+      // Add the AI response
+      addChatMessage('assistant', data.response);
+      
+      // Handle different response types
+      if (data.intent === 'search' && data.emails && data.emails.length > 0) {
+        // Display search results in the search area
+        displaySearchResults(data.emails.map(email => ({
+          metadata: {
+            subject: email.subject,
+            from: email.from,
+            fromName: email.fromName,
+            snippet: email.snippet,
+            date: email.sentAt
+          },
+          score: 0.9 // Default score for database results
+        })));
+      } else if (data.intent === 'reply' && data.draft) {
+        // Show reply draft
+        addChatMessage('assistant', `**Draft Reply:**\n**To:** ${data.draft.to}\n${data.draft.cc.length > 0 ? `**CC:** ${data.draft.cc.join(', ')}\n` : ''}${data.draft.bcc.length > 0 ? `**BCC:** ${data.draft.bcc.length} recipient(s)\n` : ''}**Subject:** ${data.draft.subject}\n\n${data.draft.body}\n\n*Would you like me to send this or make changes?*`);
+      } else if (data.intent === 'compose' && data.draft) {
+        // Show compose draft
+        addChatMessage('assistant', `**Draft Email:**\n**To:** ${data.draft.to.join(', ')}\n${data.draft.cc.length > 0 ? `**CC:** ${data.draft.cc.join(', ')}\n` : ''}**Subject:** ${data.draft.subject}\n\n${data.draft.body}\n\n*Would you like me to send this or make changes?*`);
+      }
+      
+      // Show confidence if low
+      if (data.confidence && data.confidence < 0.7) {
+        addChatMessage('assistant', `*I'm ${Math.round(data.confidence * 100)}% confident about this interpretation. If this isn't what you meant, please try rephrasing.*`, 'confidence-warning');
+      }
+      
+    } else {
+      // Handle errors gracefully
+      let errorMessage = data.response || data.error || "I couldn't process your request right now.";
+      
+      if (data.needsMoreInfo && data.suggestions) {
+        errorMessage += "\n\nTry one of these instead:\n" + data.suggestions.map(s => `• ${s}`).join('\n');
+      }
+      
+      addChatMessage('assistant', errorMessage);
+    }
+    
+  } catch (error) {
+    console.error('Enhanced agent error:', error);
+    removeChatMessage('thinking');
+    addChatMessage('assistant', "Sorry, I encountered an error while processing your request. Please try again.");
+  } finally {
+    isSearching = false;
+  }
+}
+
+function addChatMessage(sender, text, className = '') {
+  const chatMessages = document.getElementById('chat-messages');
+  if (!chatMessages) return;
+
+  const messageDiv = document.createElement('div');
+  messageDiv.className = className;
+  
+  let styles = `
+    margin-bottom: 8px;
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-size: 11px;
+    line-height: 1.4;
+  `;
+  
+  if (sender === 'user') {
+    styles += 'background: #000000; color: #ffffff; margin-left: 20px; text-align: right;';
+  } else if (className === 'confidence-warning') {
+    styles += 'background: #fef3c7; color: #92400e; margin-right: 20px; border-left: 3px solid #f59e0b;';
+  } else {
+    styles += 'background: #f3f4f6; color: #374151; margin-right: 20px;';
+  }
+  
+  messageDiv.style.cssText = styles;
+  
+  // Convert simple markdown to HTML
+  const formattedText = text
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\n/g, '<br>')
+    .replace(/\*([^*]+)\*/g, '<em>$1</em>'); // Add italic support
+  
+  messageDiv.innerHTML = formattedText;
+  chatMessages.appendChild(messageDiv);
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+
+function removeChatMessage(className) {
+  const chatMessages = document.getElementById('chat-messages');
+  if (!chatMessages) return;
+  
+  const thinkingMsg = chatMessages.querySelector(`.${className}`);
+  if (thinkingMsg) {
+    thinkingMsg.remove();
   }
 }
 
