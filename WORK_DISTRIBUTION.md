@@ -3,26 +3,55 @@
 ## 📋 **Overview**
 We need to implement the missing tool call handlers in the enhanced email agent. The work is split to avoid merge conflicts.
 
+**Current Status:**
+- ✅ Basic `sendEmail()` exists in GoogleAPIService (lines 284-317)
+- ❌ No CC/BCC support in sendEmail 
+- ❌ No actual sending in handleReply/handleCompose
+- ❌ No email management (mark read, star, etc.)
+- ❌ No forwarding functionality
+
 ---
 
 ## 🎯 **YOUR WORK (voice-agent-working branch)**
 
-### **1. EMAIL SENDING & EXECUTION**
+### **1. EMAIL SENDING & EXECUTION ENHANCEMENT**
 **Files to modify:**
-- `app/api/enhanced-email-agent/route.ts`
-- `lib/google-apis.ts` (if needed)
+- `app/api/enhanced-email-agent/route.ts` (lines 276-414)
+- `lib/google-apis.ts` (enhance existing sendEmail method)
 
-**Tasks:**
-- ✅ Implement actual email sending in `handleReply()`
-- ✅ Implement actual email sending in `handleCompose()`
-- ✅ Add email validation and error handling
-- ✅ Add confirmation steps before sending
+**Specific Tasks:**
+1. **Enhance sendEmail() in GoogleAPIService:**
+   - ✅ Add CC/BCC support to existing sendEmail method
+   - ✅ Add proper email formatting and headers
+   - ✅ Add email validation
+   - ✅ Add reply-to threading support
+
+2. **Implement actual sending in handleReply():**
+   - ✅ Replace draft creation with actual email sending
+   - ✅ Add confirmation flow ("Send this reply? Y/N")
+   - ✅ Handle CC/BCC from action parameters
+   - ✅ Add proper threading for replies
+
+3. **Implement actual sending in handleCompose():**
+   - ✅ Replace draft creation with actual email sending  
+   - ✅ Add confirmation flow ("Send this email? Y/N")
+   - ✅ Handle CC/BCC from action parameters
+   - ✅ Add email validation before sending
 
 **Functions to implement:**
 ```typescript
-// In enhanced-email-agent/route.ts
-async function sendEmail(draft: any, googleAPI: GoogleAPIService): Promise<any>
+// Enhanced GoogleAPIService.sendEmail with CC/BCC
+async sendEmail(to: string, subject: string, body: string, options?: {
+  cc?: string[], 
+  bcc?: string[], 
+  replyTo?: string,
+  threadId?: string
+}): Promise<any>
+
+// In enhanced-email-agent/route.ts  
+async function confirmAndSendEmail(draft: any, googleAPI: GoogleAPIService): Promise<any>
 async function validateEmailRecipients(recipients: string[]): Promise<boolean>
+async function formatEmailForSending(draft: any): Promise<string>
 ```
 
 ---
@@ -31,27 +60,45 @@ async function validateEmailRecipients(recipients: string[]): Promise<boolean>
 
 ### **1. EMAIL MANAGEMENT & FORWARDING**
 **Files to modify:**
-- `app/api/enhanced-email-agent/route.ts`
-- `lib/google-apis.ts` (if needed)
+- `app/api/enhanced-email-agent/route.ts` (lines 416-432)
+- `lib/google-apis.ts` (add new management methods)
 
-**Tasks:**
-- ✅ Implement `handleManage()` function
-  - Mark emails as read/unread
-  - Star/unstar emails
-  - Archive emails
-  - Delete emails
-  - Add labels
-- ✅ Implement `handleForward()` function
-  - Find original email to forward
-  - Add forwarding content
-  - Handle multiple recipients
+**Specific Tasks:**
+1. **Implement handleManage() function:**
+   - ✅ Parse management actions (mark_read, star, archive, delete, label)
+   - ✅ Find target emails based on action parameters
+   - ✅ Execute Gmail API management calls
+   - ✅ Return success/failure status
+
+2. **Implement handleForward() function:**
+   - ✅ Find original email to forward using semantic search
+   - ✅ Create forward format with "--- Forwarded Message ---"
+   - ✅ Handle multiple recipients (to, cc, bcc)
+   - ✅ Use enhanced sendEmail for actual forwarding
+
+3. **Add Gmail API management methods:**
+   - ✅ markEmailAsRead/Unread
+   - ✅ starEmail/unstarEmail  
+   - ✅ archiveEmail
+   - ✅ deleteEmail
+   - ✅ addLabelToEmail
 
 **Functions to implement:**
 ```typescript
+// In lib/google-apis.ts
+async markEmailAsRead(messageId: string): Promise<any>
+async markEmailAsUnread(messageId: string): Promise<any>
+async starEmail(messageId: string): Promise<any> 
+async unstarEmail(messageId: string): Promise<any>
+async archiveEmail(messageId: string): Promise<any>
+async deleteEmail(messageId: string): Promise<any>
+async addLabelToEmail(messageId: string, labelId: string): Promise<any>
+
 // In enhanced-email-agent/route.ts
 async function handleManage(action: EmailAction, googleAPI: GoogleAPIService, userEmail: string)
-async function handleForward(action: EmailAction, googleAPI: GoogleAPIService, userEmail: string)
-async function manageEmail(emailId: string, action: string, googleAPI: GoogleAPIService): Promise<any>
+async function handleForward(action: EmailAction, googleAPI: GoogleAPIService, userEmail: string)  
+async function findEmailsToManage(params: any, userEmail: string): Promise<string[]>
+async function formatForwardedEmail(originalEmail: any, forwardMessage: string): Promise<string>
 ```
 
 ---
