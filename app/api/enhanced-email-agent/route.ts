@@ -336,26 +336,45 @@ async function handleReply(action: EmailAction, googleAPI: GoogleAPIService, use
       ? originalEmail.subject 
       : `Re: ${originalEmail.subject}`;
 
-    return {
-      success: true,
-      intent: 'reply',
-      response: `I've drafted a reply to ${originalEmail.fromName || originalEmail.from}${cc.length > 0 ? ` with ${cc.join(', ')} CC'd` : ''}${bcc.length > 0 ? ` and ${bcc.length} BCC recipient(s)` : ''}. Here's the draft:`,
-      draft: {
-        to,
-        cc,
-        bcc,
-        subject,
-        body: replyContent,
-        originalEmail: {
-          id: originalEmail.id,
-          from: originalEmail.from,
-          subject: originalEmail.subject,
-          snippet: originalEmail.snippet
-        }
-      },
-      confidence: action.confidence,
-      readyToSend: true
+    // Create the reply draft
+    const replyDraft = {
+      to,
+      cc,
+      bcc,
+      subject,
+      body: replyContent,
+      threadId: originalEmail.threadId,
+      inReplyTo: originalEmail.messageId,
+      originalEmail: {
+        id: originalEmail.id,
+        from: originalEmail.from,
+        subject: originalEmail.subject,
+        snippet: originalEmail.snippet
+      }
     };
+
+    // Attempt to send the email immediately
+    const sendResult = await confirmAndSendEmail(replyDraft, googleAPI, action, true);
+    
+    if (sendResult.emailSent) {
+      return {
+        success: true,
+        intent: 'reply',
+        response: sendResult.response,
+        messageId: sendResult.messageId,
+        confidence: action.confidence,
+        originalEmail: replyDraft.originalEmail
+      };
+    } else {
+      return {
+        success: sendResult.success,
+        intent: 'reply',
+        response: sendResult.response,
+        error: sendResult.error,
+        draft: sendResult.needsConfirmation ? replyDraft : undefined,
+        confidence: action.confidence
+      };
+    }
 
   } catch (error) {
     console.error('Error in reply handler:', error);
@@ -388,20 +407,36 @@ async function handleCompose(action: EmailAction, googleAPI: GoogleAPIService, u
 
     const subject = params.subject || 'New Message';
 
-    return {
-      success: true,
-      intent: 'compose',
-      response: `I've drafted a new email to ${params.to.join(', ')}${params.cc ? ` with ${params.cc.join(', ')} CC'd` : ''}. Here's the draft:`,
-      draft: {
-        to: params.to,
-        cc: params.cc || [],
-        bcc: params.bcc || [],
-        subject,
-        body: emailBody
-      },
-      confidence: action.confidence,
-      readyToSend: true
+    // Create the compose draft
+    const composeDraft = {
+      to: params.to,
+      cc: params.cc || [],
+      bcc: params.bcc || [],
+      subject,
+      body: emailBody
     };
+
+    // Attempt to send the email immediately
+    const sendResult = await confirmAndSendEmail(composeDraft, googleAPI, action, true);
+    
+    if (sendResult.emailSent) {
+      return {
+        success: true,
+        intent: 'compose',
+        response: sendResult.response,
+        messageId: sendResult.messageId,
+        confidence: action.confidence
+      };
+    } else {
+      return {
+        success: sendResult.success,
+        intent: 'compose',
+        response: sendResult.response,
+        error: sendResult.error,
+        draft: sendResult.needsConfirmation ? composeDraft : undefined,
+        confidence: action.confidence
+      };
+    }
 
   } catch (error) {
     console.error('Error in compose handler:', error);
@@ -606,6 +641,80 @@ Summary:`;
   });
 
   return response.choices[0]?.message?.content || `You have ${emails.length} emails. The most recent ones are from ${emails.slice(0, 3).map(e => e.fromName || e.from).join(', ')}.`;
+}
+
+// Email sending and validation utilities
+async function validateEmailRecipients(recipients: string[], googleAPI: GoogleAPIService): Promise<{ valid: string[], invalid: string[] }> {
+  const allRecipients = Array.isArray(recipients) ? recipients : [recipients];
+  return await googleAPI.validateEmailList(allRecipients);
+}
+
+async function confirmAndSendEmail(
+  draft: any, 
+  googleAPI: GoogleAPIService, 
+  action: EmailAction,
+  sendImmediately: boolean = false
+): Promise<any> {
+  try {
+    // Validate all recipients
+    const allRecipients = [
+      ...(Array.isArray(draft.to) ? draft.to : [draft.to]),
+      ...(draft.cc || []),
+      ...(draft.bcc || [])
+    ].filter(Boolean);
+
+    const validation = await validateEmailRecipients(allRecipients, googleAPI);
+    
+    if (validation.invalid.length > 0) {
+      return {
+        success: false,
+        error: 'Invalid email addresses detected',
+        response: `Cannot send email. Invalid addresses: ${validation.invalid.join(', ')}`,
+        needsCorrection: true
+      };
+    }
+
+    // For now, we'll send immediately but could add confirmation step later
+    if (sendImmediately || action.confidence > 0.8) {
+      // Send the email using enhanced sendEmail method
+      const result = await googleAPI.sendEmail(
+        Array.isArray(draft.to) ? draft.to[0] : draft.to,
+        draft.subject,
+        draft.body,
+        {
+          cc: draft.cc || [],
+          bcc: draft.bcc || [],
+          threadId: draft.threadId,
+          inReplyTo: draft.inReplyTo
+        }
+      );
+
+      return {
+        success: true,
+        messageId: result.id,
+        response: `✅ Email sent successfully to ${Array.isArray(draft.to) ? draft.to[0] : draft.to}${draft.cc?.length > 0 ? ` (CC: ${draft.cc.join(', ')})` : ''}${draft.bcc?.length > 0 ? ` (BCC: ${draft.bcc.length} recipient(s))` : ''}`,
+        emailSent: true
+      };
+    } else {
+      // Return draft for confirmation
+      return {
+        success: true,
+        response: `I've prepared your email. Reply "send" to send it, or "edit" to make changes.`,
+        draft,
+        needsConfirmation: true,
+        confidence: action.confidence
+      };
+    }
+
+  } catch (error) {
+    console.error('Error in confirmAndSendEmail:', error);
+    return {
+      success: false,
+      error: 'Failed to send email',
+      response: `Sorry, I couldn't send the email: ${error.message}`,
+      emailSent: false
+    };
+  }
 }
 
 function formatDate(date: Date | string): string {

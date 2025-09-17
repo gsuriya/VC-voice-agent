@@ -280,17 +280,51 @@ export class GoogleAPIService {
     };
   }
 
-  // Send email
-  async sendEmail(to: string, subject: string, body: string) {
+  // Enhanced send email with CC/BCC support and threading
+  async sendEmail(to: string, subject: string, body: string, options?: {
+    cc?: string[], 
+    bcc?: string[], 
+    replyTo?: string,
+    threadId?: string,
+    inReplyTo?: string
+  }) {
     try {
-      console.log(`Attempting to send email to: ${to}`);
-      console.log(`Subject: ${subject}`);
+      console.log(`📧 Attempting to send email to: ${to}`);
+      console.log(`📝 Subject: ${subject}`);
+      if (options?.cc?.length) console.log(`📋 CC: ${options.cc.join(', ')}`);
+      if (options?.bcc?.length) console.log(`🔒 BCC: ${options.bcc.length} recipient(s)`);
       
-      const message = [
+      // Build email headers
+      const headers = [
         `To: ${to}`,
         `Subject: ${subject}`,
         'Content-Type: text/html; charset=utf-8',
-        '',
+        'MIME-Version: 1.0'
+      ];
+
+      // Add CC if provided
+      if (options?.cc && options.cc.length > 0) {
+        headers.push(`Cc: ${options.cc.join(', ')}`);
+      }
+
+      // Add BCC if provided
+      if (options?.bcc && options.bcc.length > 0) {
+        headers.push(`Bcc: ${options.bcc.join(', ')}`);
+      }
+
+      // Add threading headers for replies
+      if (options?.inReplyTo) {
+        headers.push(`In-Reply-To: ${options.inReplyTo}`);
+      }
+
+      if (options?.replyTo) {
+        headers.push(`References: ${options.replyTo}`);
+      }
+
+      // Construct the complete message
+      const message = [
+        ...headers,
+        '', // Empty line separates headers from body
         body
       ].join('\n');
 
@@ -299,21 +333,53 @@ export class GoogleAPIService {
         .replace(/\//g, '_')
         .replace(/=+$/, '');
 
-      console.log('Sending email via Gmail API...');
+      console.log('🚀 Sending email via Gmail API...');
+      
+      // Prepare request body
+      const requestBody: any = {
+        raw: encodedMessage
+      };
+
+      // Add thread ID for threading if provided
+      if (options?.threadId) {
+        requestBody.threadId = options.threadId;
+      }
+
       const response = await this.gmail.users.messages.send({
         userId: 'me',
-        requestBody: {
-          raw: encodedMessage
-        }
+        requestBody
       });
 
-      console.log('Email sent successfully:', response.data);
+      console.log('✅ Email sent successfully:', response.data);
       return response.data;
     } catch (error) {
-      console.error('Error sending email:', error);
-      console.error('Error details:', JSON.stringify(error, null, 2));
+      console.error('❌ Error sending email:', error);
+      console.error('📋 Error details:', JSON.stringify(error, null, 2));
       throw error;
     }
+  }
+
+  // Email validation helper
+  async validateEmail(email: string): Promise<boolean> {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  }
+
+  // Validate multiple email addresses
+  async validateEmailList(emails: string[]): Promise<{ valid: string[], invalid: string[] }> {
+    const valid: string[] = [];
+    const invalid: string[] = [];
+    
+    for (const email of emails) {
+      const trimmedEmail = email.trim();
+      if (await this.validateEmail(trimmedEmail)) {
+        valid.push(trimmedEmail);
+      } else {
+        invalid.push(trimmedEmail);
+      }
+    }
+    
+    return { valid, invalid };
   }
 
   // Calendar API methods
