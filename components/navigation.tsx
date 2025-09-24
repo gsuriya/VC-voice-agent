@@ -5,18 +5,16 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
-import { BarChart3, Building2, Phone, PieChart, Settings, Moon, Sun, Menu, X, Mic, Mail, Search } from "lucide-react"
+import { BarChart3, Building2, Phone, PieChart, Settings, Moon, Sun, Menu, X, Mic, Database, Key } from "lucide-react"
 import { useTheme } from "next-themes"
 
 const navigation = [
   { name: "Dashboard", href: "/", icon: BarChart3 },
   { name: "Companies", href: "/companies", icon: Building2 },
   { name: "Live Calls", href: "/calls", icon: Phone },
-  { name: "Outbound Calls", href: "/voice", icon: Mic },
-  { name: "Email Agent", href: "/email-agent", icon: Mail },
-  { name: "Email Search", href: "/email-search", icon: Search },
-  { name: "Gmail Sync", href: "/gmail-sync", icon: Mail },
+  { name: "Voice Agent", href: "/voice", icon: Mic },
   { name: "Analytics", href: "/analytics", icon: PieChart },
+  { name: "Auth Success", href: "/auth-success", icon: Key },
   { name: "Settings", href: "/settings", icon: Settings },
 ]
 
@@ -33,7 +31,7 @@ export function Navigation() {
             <div className="h-8 w-8 rounded-lg bg-sidebar-primary flex items-center justify-center">
               <BarChart3 className="h-5 w-5 text-sidebar-primary-foreground" />
             </div>
-            <span className="text-xl font-bold text-sidebar-foreground">VentureAI</span>
+            <span className="text-xl font-bold text-sidebar-foreground">Core Platform</span>
           </div>
         </div>
 
